@@ -38,15 +38,7 @@ CONFIG_SCHEMA = {
         "required": False,
         "type": "dict",
         "schema": {
-            "workers": {"required": True, "type": "number", "min": 1, "max": 99},
-            "instances": {
-                "required": True,
-                "type": "dict",
-                "schema": {
-                    "min": {"required": True, "type": "number", "min": 0, "max": 99},
-                    "max": {"required": True, "type": "number", "min": 0, "max": 99},
-                },
-            },
+            "replicas": {"required": True, "type": "number", "min": 1, "max": 10},
         },
     },
 }

@@ -6,7 +6,7 @@ from inferex.io.termformat import info
 
 
 def get_config_file_path(app_name: str, filename: str) -> Path:
-    """ Get a Path object for the given filename within the .config/app_name directory
+    """Get a Path object for the given filename within the .config/app_name directory
 
     Args:
         app_name: The CLI application name ("inferex")
@@ -22,7 +22,7 @@ def get_config_file_path(app_name: str, filename: str) -> Path:
 
 
 def delete_config_file(fullpath: Path) -> None:
-    """ Deletes a file from the system config folder.
+    """Deletes a file from the system config folder.
 
     Args:
         fullpath: The full path to the file to delete on the filesystem

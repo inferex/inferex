@@ -1,0 +1,6 @@
+
+project:
+  name: SimpleFunction
+
+scaling:
+  replicas: 2

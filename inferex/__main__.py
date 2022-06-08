@@ -1,7 +1,9 @@
 """ Main entry point for CLI application """
 
+import traceback
+
 from inferex import __app_name__, cli
-from inferex.help.human import technical_support
+from inferex.io.human import technical_support
 
 
 def main():
@@ -10,9 +12,12 @@ def main():
     """
     try:
         cli.app(prog_name=__app_name__)
-    except Exception as exception:  # pylint: disable=W0703
-        print(f"Unhandled exception - {exception}")
-        print(technical_support())
+    except Exception as exc:  # pylint: disable=W0703
+        print(
+            "\nTraceback:\n"+ "\n".join(traceback.format_tb(exc.__traceback__)) +
+            f"Unhandled exception - {exc}"
+            f"{technical_support()}"
+        )
 
 
 if __name__ == "__main__":

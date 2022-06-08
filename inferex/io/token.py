@@ -18,7 +18,7 @@ def jwt_cache_path(app_name: str) -> Path:
     Returns:
         token_path (Path): The full path to the token json file location on filesystem
     """
-    app_dir = typer.get_app_dir(app_name)
+    app_dir = typer.get_app_dir(app_name, force_posix=True)
     token_path = Path(app_dir) / "token.json"
     return token_path
 
@@ -29,8 +29,13 @@ def cache_token(token: dict):
     Args:
         token: A dictionary containing the users OAuth token
     """
+    # Get token cache path
     cache = jwt_cache_path(__app_name__)
 
+    # Ensure directory exists
+    cache.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write token to file
     with open(cache, "w", encoding="utf-8") as file_pointer:
         json.dump(token, file_pointer)
 

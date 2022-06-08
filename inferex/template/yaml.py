@@ -2,7 +2,7 @@
 
 
 def default_project(project_name: str) -> str:
-    """ Return a default configuration YAML
+    """Return a default configuration YAML
 
     Args:
         project_name: The name of the users inferex project

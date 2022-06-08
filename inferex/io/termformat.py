@@ -10,7 +10,7 @@ SPINNER_COLOR = "cyan"
 
 
 def error_style(err: str, indent: int = 1) -> str:
-    """ Format a string to display as an error
+    """Format a string to display as an error
 
     Args:
         err: The error message to display to the user
@@ -24,7 +24,7 @@ def error_style(err: str, indent: int = 1) -> str:
 
 
 def success_style(msg: str, indent: int = 1) -> str:
-    """ Format a string to display as success
+    """Format a string to display as success
 
     Args:
         msg: The message to display to the user
@@ -38,7 +38,7 @@ def success_style(msg: str, indent: int = 1) -> str:
 
 
 def info_style(msg: str, indent: int = 1) -> str:
-    """ Format a string to display as a normal message (no styling)
+    """Format a string to display as a normal message (no styling)
 
     Args:
         msg: The message to display to the user
@@ -52,7 +52,7 @@ def info_style(msg: str, indent: int = 1) -> str:
 
 
 def error(err: str, indent: int = 1) -> None:
-    """ Helper function to show error messages, less verbose than typer.echo(error_style)
+    """Helper function to show error messages, less verbose than typer.echo(error_style)
 
     Args:
         err: The message to display to the user

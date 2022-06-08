@@ -1,0 +1,6 @@
+
+project:
+  name: SentimentAnalysis
+
+scaling:
+  replicas: 2

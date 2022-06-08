@@ -14,9 +14,8 @@ from yaspin import yaspin
 from progress.bar import FillingSquaresBar
 
 from inferex.api.client import OperatorClient
-from inferex.help.human import technical_support
 from inferex.io.termformat import SPINNER_COLOR, error, info, success
-from inferex.io.utils import bundle_size
+from inferex.io.utils import bundle_size, handle_api_response
 
 
 PROGRESS_BAR_STEP = 20
@@ -65,15 +64,13 @@ def run_deploy(target_dir: Path, git_sha: str):
         client = OperatorClient()
         if client.cached_token is None:
             error("No token present in token.json, exiting.")
-            info("Did you get a token with 'inferex login' ?")
+            info("Did you get a token with 'inferex login'?")
             raise typer.Exit(1)
 
         try:
             response = client.deploy(
-                git_sha,
-                file_p.name,
-                target_dir,
-                callback=prog_callback)
+                git_sha, file_p.name, target_dir, callback=prog_callback
+            )
             prog_bar.finish()
         except requests.exceptions.ConnectionError as conn_err:
             error(str(conn_err))
@@ -82,11 +79,12 @@ def run_deploy(target_dir: Path, git_sha: str):
         if response.status_code == requests.codes.ok:
             success("Deploy complete")
 
-        elif response.status_code in requests.codes.forbidden:
-            error(f"""Invalid Login,
+        elif response.status_code == requests.codes.forbidden:
+            error(
+                f"""Invalid Login,
                 please double check your username, password, and/or token
-                (status code {response.status_code})""")
+                (status code {response.status_code})"""
+            )
 
         else:
-            error(f"Server returned status code: {response.status_code}")
-            info(technical_support())
+            handle_api_response(response)

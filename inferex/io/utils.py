@@ -1,7 +1,10 @@
 """ General IO utils """
-from pathlib import Path
-import yaml
 
+from pathlib import Path
+from datetime import datetime, timezone
+
+import yaml
+import humanize
 from typer import Exit
 
 from inferex.template.validation import ConfigInvalid, validate_project_file
@@ -73,8 +76,29 @@ def valid_inferex_project(path: Path):
     validate_project_file(config_filepath)
 
 
+def read_project_config(full_path: Path) -> dict:
+    """Reads a project config from path.
+
+    Args:
+        full_path (Path): path
+
+    Raises:
+        yaml_excep: YAMLError
+
+    Returns:
+        dict: dict
+    """
+    with open(full_path / "inferex.yaml", "r", encoding="utf-8") as stream:
+        try:
+            project_dict = yaml.safe_load(stream)
+        except yaml.YAMLError as yaml_excep:
+            error(yaml_excep)
+            raise yaml_excep
+    return project_dict
+
+
 def get_project_name(full_path: Path) -> str:
-    """ Read inferex.yaml and return the project:name
+    """Read inferex.yaml and return the project:name
         note: Project names should not be changed after creation.
               If a new name is desired, it is recommended to init a new project.
 
@@ -88,15 +112,12 @@ def get_project_name(full_path: Path) -> str:
         Exit: Typer exit on critial failure
         yaml.YAMLError: On schema validation failure
     """
-    with open(full_path / 'inferex.yaml', "r", encoding="utf-8") as stream:
-        try:
-            project_dict = yaml.safe_load(stream)
-        except yaml.YAMLError as yaml_excep:
-            error(yaml_excep)
-            raise
 
-    project_name = project_dict.get('project', {}).get('name', {})
+    # Read the config file
+    project_dict = read_project_config(full_path=full_path)
 
+    # Validate the config file
+    project_name = project_dict.get("project", {}).get("name", {})
     if project_name:
         return project_name
 
@@ -105,7 +126,7 @@ def get_project_name(full_path: Path) -> str:
 
 
 def handle_api_response(response):
-    """ Convenience function for handling API responses.
+    """Convenience function for handling API responses.
 
     Checks if the request was successful and if it contains JSON data before calling
     the .json() function.
@@ -119,13 +140,69 @@ def handle_api_response(response):
     Raises:
         Exit: Exit code of 1 if json data is not indicated in headers.
     """
+
     if not response.ok:
-        error(f"Non-200 response from server ({response.status_code})",
-            msg_type="error")
+        try:
+            response_json = response.json()
+            detail = response_json.get("detail", "No detail provided")
+        except ValueError:
+            detail = str(response.content)
+        error(f"""{response.status_code} response from server.
+            Detail: {detail}""")
+        raise Exit(1)
+
 
     if "json" not in response.headers.get("content-type"):
-        info("No JSON data was returned.", msg_type="info")
+        info("No JSON data was returned.")
         # exit with non-zero, as the command could be part of a chain of commands
         raise Exit(1)
 
     return response.json()
+
+
+
+def get_datetime_age(timestamp: str) -> str:
+    """
+    Get the age of a datetime string relative to local timezone.
+
+    Args:
+        timestamp (str): The datetime string.
+
+    Returns:
+        str: The age of the datetime string.
+    """
+    if not timestamp:
+        return timestamp
+
+    # Parse the datetime string
+    utc_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S")
+
+    # Get the timezone offset
+    timezone_offset = datetime.now(timezone.utc).astimezone().utcoffset()
+
+    # Convert UTC to local time
+    current_age = utc_time + timezone_offset
+
+    return humanize.naturaltime(current_age)
+
+
+def get_project_params(project: str) -> dict:
+    """Get a project_name from a project directory.
+
+    Args:
+        project (str): The path or name of the project.
+
+    Returns:
+        dict: The project name.
+    """
+    if not project:
+        params = {}
+
+    elif Path(project).exists():
+        project_dir = normalize_project_dir(project)
+        project_config = read_project_config(project_dir)
+        project_name = project_config.get("project").get("name")
+        params = {"project_name": project_name}
+    else:
+        params = {"project_name": project}
+    return params

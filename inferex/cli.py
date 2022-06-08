@@ -26,21 +26,25 @@ from inferex.io.git import git_sha
 from inferex.io.termformat import error, info, success
 from inferex.io.token import jwt_cache_path
 from inferex.io.utils import normalize_project_dir, valid_inferex_project
-from inferex.subapp.auth import auth_app
+from inferex.subapp.login import login_app
 from inferex.subapp.deploy import run_deploy
-from inferex.subapp.info import info_app
+from inferex.subapp.logs import logs_app
+from inferex.subapp.get import get_app
+from inferex.subapp.delete import delete_app
 from inferex.template.validation import ConfigInvalid
 from inferex.template.yaml import default_project
 
 
 app = typer.Typer()
-
-app.add_typer(auth_app, name="login")
-app.add_typer(info_app, name="info")
+app._add_completion = False  # pylint: disable=protected-access
+app.add_typer(login_app, name="login")
+app.add_typer(get_app, name="get")
+app.add_typer(delete_app, name="delete")
+app.add_typer(logs_app, name="logs")
 
 
 def init(path: str, project_name: str):
-    """ Creates a new project in the target folder.
+    """Creates a new project in the target folder.
 
     Args:
         path: The path to the users project directory
@@ -73,11 +77,10 @@ def init(path: str, project_name: str):
 @app.command("reset", help="❌ Deletes files created at login")
 def reset(
     filename: Optional[str] = typer.Argument(
-        None,
-        help="(optional) filename to delete (e.g., token.json)"
+        None, help="(optional) filename to delete (e.g., token.json)"
     )
 ):
-    """ By default deletes the token.json file created at login.
+    """By default deletes the token.json file created at login.
 
     Args:
         filename: The file name to be deleted [optional]
@@ -92,9 +95,11 @@ def reset(
 
 @app.command("deploy", help="🚀 Deploy a project.")
 def deploy(
-    path: Optional[str] = typer.Argument(".", help="Full or relative path to project folder."),
-    ):
-    """ This will bundle an application and submit it for processing
+    path: Optional[str] = typer.Argument(
+        ".", help="Full or relative path to project folder."
+    ),
+):
+    """This will bundle an application and submit it for processing
 
     Args:
         path: The filesystem path to the project directory root, containing an inferex.yaml
@@ -120,7 +125,7 @@ def deploy(
 
 
 def version_callback(value: bool):
-    """ Eager function to print the version info and terminate
+    """Eager function to print the version info and terminate
 
     Args:
         value: Supplied by typer in callback
@@ -136,13 +141,14 @@ def version_callback(value: bool):
 @app.callback(invoke_without_command=True)
 def main(
     _version: Optional[bool] = typer.Option(
-        None, "--version",
+        None,
+        "--version",
         callback=version_callback,
         is_eager=True,
-        help="Display version number."
+        help="Display version number.",
     ),
 ) -> None:
-    """ Init, deploy, and manage your projects with Inferex. """
+    """Init, deploy, and manage your projects with Inferex."""
     # 'inferex' by itself was invoked.
     if len(sys.argv) == 1:
         typer.echo("Enter 'inferex --help' for a list of commands.")

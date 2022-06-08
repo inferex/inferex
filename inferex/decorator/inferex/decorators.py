@@ -5,10 +5,8 @@ from functools import wraps
 from typing import Callable
 
 
-def pipeline(
-    dataloader=None, endpoint=None, is_async=False, timeout=None
-) -> Callable:
-    """ Wrapper for inference functions in the users pipeline.
+def pipeline(dataloader=None, endpoint=None, is_async=False, timeout=None) -> Callable:
+    """Wrapper for inference functions in the users pipeline.
 
     Args:
         dataloader (DataLoader): The dataloader to use for inference.
@@ -21,7 +19,7 @@ def pipeline(
     """
 
     def decorator(func: Callable):
-        """ Decorator for said function.
+        """Decorator for said function.
 
         Args:
             func: The users function to decorate

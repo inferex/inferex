@@ -1,0 +1,6 @@
+
+project:
+  name: TextGeneration
+
+scaling:
+  replicas: 2

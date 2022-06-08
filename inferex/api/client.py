@@ -1,4 +1,5 @@
 """ Client to call the API endpoints on Operator, a simple wrapper to requests """
+
 import os
 from typing import Callable, Optional
 from pathlib import Path
@@ -26,7 +27,19 @@ class OperatorClient:
         self.cached_token = cached_token()
 
     def _headers(self):
-        return {'Authorization': 'Bearer ' + self.cached_token['access_token']}
+        if not self.cached_token:
+            error("No token found. Please run `inferex login`")
+            raise Exit(1)
+
+        # Get authorization header
+        access_token = self.cached_token.get("access_token")
+        authorization = f"Bearer {access_token}"
+
+        # Construct headers
+        headers = {
+            "Authorization": authorization
+        }
+        return headers
 
     def login(self, username: str, password: str) -> Response:
         """Call the /auth/login endpoint on Operator
@@ -46,7 +59,11 @@ class OperatorClient:
         return api_resonse
 
     def deploy(
-        self, git_sha: str, archive_fullpath: str, project_path: Path, callback: Callable
+        self,
+        git_sha: str,
+        archive_fullpath: str,
+        project_path: Path,
+        callback: Callable,
     ) -> Response:
         """Call the /deploy endpoint on operator
 
@@ -72,38 +89,78 @@ class OperatorClient:
             monitor = MultipartEncoderMonitor(encoder, callback)
 
             project_name = get_project_name(project_path.resolve())
-            create_params = {'project_name': project_name}
+            create_params = {"project_name": project_name}
 
-            resp = requests.post(f"{self.api_root}/projects/create",
-                                    params=create_params,
-                                    headers=self._headers())
+            resp = requests.post(
+                f"{self.api_root}/projects",
+                params=create_params,
+                headers=self._headers(),
+            )
 
             if not resp.ok:
                 error(f"Non-200 response ({resp.status_code})")
                 raise Exit()
 
             # request to projects/deploy
-            deploy_params = {'project_name': project_name,
-                             'git_commit_sha': git_sha}
+            deploy_params = {"project_name": project_name, "git_commit_sha": git_sha}
 
             headers = self._headers()
-            headers.update({'Content-Type': monitor.content_type})
+            headers.update({"Content-Type": monitor.content_type})
 
-            return requests.post(f'{self.api_root}/projects/deploy',
-                                 data=monitor,
-                                 params=deploy_params,
-                                 headers=headers)
+            return requests.post(
+                f"{self.api_root}/deployments",
+                data=monitor,
+                params=deploy_params,
+                headers=headers,
+            )
 
-    def info(self, endpoint: Optional[str] = "/") -> Response:
+    def get(self, endpoint: Optional[str] = "/", **kwargs: dict) -> Response:
         """
         Make a GET request to the API endpoint with configured credentials.
 
         Args:
             endpoint: the endpoint to make a GET request to
+            **kwargs: additional arguments to pass to requests.get
 
         Returns:
             response.json(): a python dictionary if response headers indicate json data
             was returned. Otherwise, exit with code 1.
         """
-        response = requests.get(self.api_root + endpoint, headers=self._headers())
-        return handle_api_response(response)
+
+        # Get headers
+        route = self.api_root + endpoint
+        headers = self._headers()
+
+        # Make request
+        response = requests.get(route, headers=headers, **kwargs)
+
+        # Handle response
+        response = handle_api_response(response)
+
+        return response
+
+
+    def delete(self, endpoint: Optional[str] = "/", **kwargs: dict) -> Response:
+        """
+        Make a DELETE request to the API endpoint with configured credentials.
+
+        Args:
+            endpoint: the endpoint to make a DELETE request to
+            **kwargs: additional arguments to pass to requests.post
+
+        Returns:
+            response.json(): a python dictionary if response headers indicate json data
+            was returned. Otherwise, exit with code 1.
+        """
+
+        # Get headers
+        route = self.api_root + endpoint
+        headers = self._headers()
+
+        # Make request
+        response = requests.delete(route, headers=headers, **kwargs)
+
+        # Handle response
+        response = handle_api_response(response)
+
+        return response
