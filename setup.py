@@ -12,13 +12,13 @@ with open('requirements.txt') as f:
 # Setup the package
 setup(
     name="inferex",
-    version="0.0.2",
+    version="0.0.3",
     description="Inferex CLI - Init, deploy and manage your projects on Inferex infrastructure",
     url="https://inferex.com",
     author_email="alain@inferex.com",
     install_requires=required,
     packages=find_packages(exclude=["tests", "inferex.decorator.tests"]),
-    package_data={"": ["inferex/template"]},
+    package_data={},
     include_package_data=True,
     entry_points={"console_scripts": ["inferex = inferex.__main__:main"]},
     keywords=["inferex"],
