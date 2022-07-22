@@ -1,78 +1,58 @@
 # Inferex CLI
 
-Inferex CLI - Init, deploy and manage your projects on Inferex infrastructure
+Deploy and manage your AI projects on Inferex infrastructure.
 
-[Please see our online documentation](https://docs.inferex.com/)
+[Please see our online documentation for a tutorial.](https://docs.inferex.com/)
 
 ## Installation
 
-### 0. Setup
-
-Download the most recent version. The inferex CLI can be installed so that it
-can be invoked from the command line anywhere
-
-```shell
-python setup.py install
-inferex [command]
+```bash
+pip install inferex
 ```
 
-This may leave behind some installation artifacts in the CLI folder.
+You can invoke "inferex --help" for a list of commands. Each command may have
+subcommands, which can be called with "--help" as well.
 
-Alternatively you can add the CLI directory to your system path. On Linux this
-means adding this line to ~/.profile:
+Version 0.0.4:
 
-```shell
-export PYTHONPATH=$PYTHONPATH:/full/path/to/cli/folder
+```bash
+Usage: inferex [OPTIONS] COMMAND [ARGS]...
+
+  Init, deploy, and manage your projects with Inferex.
+
+Options:
+  --version  Display version number.
+  --help     Show this message and exit.
+
+Commands:
+  delete  🗑️ Delete projects, deployments, and endpoints.
+  deploy  🚀 Deploy a project.
+  get     🌎 Get information about Inferex resources.
+  login   🔑 Fetches your API key from the server.
+  logs    🗒️ Get logs from Inferex deployments.
+  reset   ❌ Deletes files created at login
 ```
 
-It is recommended to use a virtual environment. Install requirements from
-requirements.txt with pip, or from pyproject.toml using poetry (poetry install).
-These are located in (at the time of writing) /platform/inferex/cli.
+## CLI - Basic usage
 
-```shell
-pip install -r requirements.txt
-```
+1. Create or navigate to the project folder you wish to deploy. You may copy an
+   example project folder from the examples folder ("face_detection",
+   "sentiment_analysis", etc). Each example has inferex.yaml, pipeline.py, and
+   requirements.txt files.
 
-or
+1. Run the "inferex login" command to log in with your inferex account
+   automatically save your token locally.
 
-```shell
-poetry install
-```
+1. Run "inferex deploy". This will create a tar archive of your project folder
+   and send it to the server for processing.
 
-You can invoke "inferex" and it should output help text.
-
-### 1. Project folder structure
-
-Create or navigate to the project folder you wish to deploy. You may copy an
-example project folder from the examples folder ("sentiment_analysis", etc).
-Each example has inferex.yaml, pipeline.py, and requirements.txt files.
-
-### 2. Initialization
-
-From within this project folder, or by passing in the absolute path while using
-"python -m", run the command "inferex init". You will be prompted to enter
-information that will be saved locally.
-
-### 3. Login
-
-Run the "inferex login" command to log in and receive your API key. For local
-CLI development, see "development notes" at the bottom when creating your user
-on the backend for the first time.
-
-### 4. Deploy
-
-Run "inferex deploy". This will create a tar archive of your project folder and
-send it to the server for processing.
-
-### Troubleshooting
+## Troubleshooting
 
 Having issues? Try confirming these variables:
 
 - What is your current working directory?
-- What python interpreter is being used?
-- Do the credentials you saved via the browser form match those in
-  credentials.json? This file is located one of these directories depending on
-  your OS:
+- What python interpreter is being used (in bash:  'which python')?
+- Do you have a token saved locally? Check this folder depending on your OS:
 
 ```plaintext
 Mac OS X:               ~/Library/Application Support/inferex

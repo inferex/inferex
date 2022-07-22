@@ -1,0 +1,118 @@
+
+[tool.poetry]
+name = "inferex"
+version = "0.0.4"
+description = "Inferex CLI - Init, deploy and manage your projects on Inferex infrastructure"
+authors = ["Greg <greg@inferex.com>"]
+packages = [{ include = "inferex" }]
+readme = "README.md"
+exclude = [
+    ".*",
+    "inferex/decorator/.*",
+    "**/__pycache__",
+    "**/tests/",
+    "**/README.md",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.28.0"
+yaspin = "^2.1.0"
+Cerberus = "^1.3.4"
+requests-toolbelt = "^0.9.1"
+GitPython = "^3.1.27"
+PyYAML = "^6.0"
+humanize = "^4.1.0"
+tabulate = "^0.8.9"
+tqdm = "^4.64.0"
+Pygments = "^2.12.0"
+dirhash = "^0.2.1"
+pylint = "^2.14.1"
+
+[tool.poetry.dev-dependencies]
+coverage = {extras = ["toml"], version = "^6.4.1"}
+py = "^1.11.0"
+pyfakefs = "^4.5.6"
+pyparsing = "^3.0.7"
+pytest = "^7.1.1"
+pytest-cov = "^3.0.0"
+pytest-order = "^1.0.1"
+pylint-gitlab = "^1.0.0"
+safety = "^1.10.3"
+bandit = "^1.7.4"
+
+[tool.poetry.scripts]
+inferex = 'inferex.__main__:main'
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-rs"
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/decorator/*",
+]
+
+[tool.coverage.report]
+omit = [
+    "*/tests/*",
+    "*/decorator/*",
+]
+fail_under = 70
+show_missing = true
+ignore_errors = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.vulture]
+exclude = [
+    "venv/",
+    "build/",
+    "inferex/decorator/",
+    "tests/project",
+]
+ignore_decorators = [
+    "@pytest.fixture",
+    "@app.*",
+]
+ignore_names = [
+    "_*",
+    "*_fixture",
+]
+paths = ["."]
+sort_by_size = true
+min_confidence = 70
+
+[tool.pylint.master]
+fail-under = 10.0
+ignore = "CVS"
+jobs=0
+load-plugins = "pylint.extensions.docparams"
+persistent = "yes"
+suggestion-mode = "yes"
+
+[tool.pylint.messages_control]
+disable = [
+    "fixme",
+    "E0401",  # E0401: Unable to import '%s'
+    "logging-fstring-interpolation",
+    "no-member",
+]
+
+[tool.pylint.reports]
+output-format = "text"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

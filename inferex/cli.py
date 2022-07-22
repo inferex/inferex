@@ -1,155 +1,204 @@
-"""
-    Inferex CLI
-
-    Usage: inferex [SUBAPP] [command]
-
-    Where [SUBAPP] is:
-        - login     :   Attempt API login to validate credentials and generate an access token
-        - inference :   Module to handle user project lifecycle and execution
-        - configure :   Set platform login details (TODO: Auth via API Key only?)
-        - deploy    :   Deploy a project
-
-
-    Examples:
-
-        inferex login           Authenticate to server
-        inferex deploy          Deploy a project to Inferex infrastructure
-"""
+""" Inferex CLI main command group & core commands. """
 import sys
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 
-import typer
+import click
 
-from inferex import __version__, __app_name__
-from inferex.io.config import delete_config_file, get_config_file_path
-from inferex.io.git import git_sha
-from inferex.io.termformat import error, info, success
-from inferex.io.token import jwt_cache_path
-from inferex.io.utils import normalize_project_dir, valid_inferex_project
-from inferex.subapp.login import login_app
-from inferex.subapp.deploy import run_deploy
-from inferex.subapp.logs import logs_app
-from inferex.subapp.get import get_app
-from inferex.subapp.delete import delete_app
-from inferex.template.validation import ConfigInvalid
-from inferex.template.yaml import default_project
+from inferex import __version__
+from inferex import Client
+from inferex.utils import AliasedGroup
+from inferex.io.termformat import info
+from inferex.io.output import display_logs
+from inferex.help.help_texts import TIME_HELP_TEXT
+from inferex.utils import disable_user_prompts
 
 
-app = typer.Typer()
-app._add_completion = False  # pylint: disable=protected-access
-app.add_typer(login_app, name="login")
-app.add_typer(get_app, name="get")
-app.add_typer(delete_app, name="delete")
-app.add_typer(logs_app, name="logs")
+# CLI
+@click.command(cls=AliasedGroup, name="inferex")
+@click.version_option(version=__version__)
+def cli():
+    """
+    Inferex CLI is a tool that enables AI companies to rapidly deploy pipelines.
+    Init, deploy, and manage your projects with Inferex.
+    Invoke "inferex --help" for a list of commands.
+    """
 
 
-def init(path: str, project_name: str):
-    """Creates a new project in the target folder.
+# Core commands
+@cli.command()
+@click.argument("path", type=click.Path(exists=True))
+def init(path: str):
+    """
+    ✨ Initializes a new project.
+
+    path: Full or relative path to a project folder.
+    \f
+    Args:
+        path: Full or relative path to project folder.
+    """
+    client = Client()
+    client.init(path)
+
+
+@cli.command()
+@click.option(
+    "--username",
+    help="Your Inferex username.",
+    prompt="👤 Inferex Username",
+    default=None
+)
+@click.password_option(
+    help="Your Inferex password.",
+    prompt="🔑 Inferex Password",
+    hide_input=True,
+    confirmation_prompt=False,
+    default=None
+)
+@disable_user_prompts
+def login(username: Optional[str], password: Optional[str], q: Optional[str]):  # pylint: disable=C0103, W0613
+    """
+    🔑 Fetch api key via username & password authentication.
+    \f
 
     Args:
-        path: The path to the users project directory
-        project_name: The name of the users project
-
-    Raises:
-        Exit: Typer exit if path/target_dir is not found.
+        username: Inferex account username.
+        password: Inferex account password.
+        q: -q flag to suppress user prompts.
     """
-    target_dir = normalize_project_dir(path)
+    # password passed in via stdin
+    if password == "-":  # nosec
+        password = sys.stdin.read().strip()
 
-    if not target_dir.is_dir():
-        error(f"{target_dir.absolute()} is not a directory")
-        raise typer.Exit(code=1)
+    if not username or not password:
+        click.echo("Username or password not supplied, exiting.", err=True)
+        sys.exit(1)
 
-    if project_name is None:
-        project_name = typer.prompt("Project name")
-
-    yaml_file = target_dir / "inferex.yaml"
-    if yaml_file.is_file():
-        info(f"{yaml_file} already exists.")
-        raise typer.Exit()
-
-    with open(yaml_file, "w", encoding="UTF-8") as project_file:
-        project_file.write(default_project(project_name))
-
-    success(f"Project initialized at {target_dir.absolute()}.\n")
-    info("📝 Edit the 'inferex.yaml' file to customize deployment parameters.\n")
+    # Create client and login
+    client = Client()
+    client.login(username, password)
 
 
-@app.command("reset", help="❌ Deletes files created at login")
-def reset(
-    filename: Optional[str] = typer.Argument(
-        None, help="(optional) filename to delete (e.g., token.json)"
-    )
+@cli.command("deploy")
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Uses a random SHA as the deployment ID to bypass duplicate constraints."
+)
+@click.option(
+    "--token",
+    default=None,
+    help="Pass in a JWT token instead of reading from local cache."
+)
+@click.argument("path", default=".")
+def deploy(force: bool, token: Optional[str], path: Optional[str]):
+    """\b 🚀 Deploy a project.
+
+    This command will bundle an application in [PATH] and submit it for processing.
+
+    path: Full or relative path to a project folder.
+    \f
+
+    Args:
+        force: Uses a random SHA as the deployment ID to bypass duplicate constraints.
+        token: Pass a JWT token instead of reading from local cache.
+        path: Full or relative path to a project folder.
+    """
+    client = Client()
+    client.deploy(path, force, token)
+
+
+@cli.command("logs")
+@click.option(
+    "--limit",
+    default=1000,
+    help="The total number of logs to gather across all streams."
+)
+@click.option("--earliest", default=None, help=TIME_HELP_TEXT)
+@click.option("--latest", default=None)
+@click.argument("deployment")
+def logs(
+    limit: Optional[int],
+    earliest: Optional[str],
+    latest: Optional[str],
+    deployment: int,
 ):
-    """By default deletes the token.json file created at login.
+    """\b
+    📃 Get logs from Inferex deployments.
+    E.g., 'inferex logs <deployment>'
+
+    deployment: deployment ID to get logs from (required).
+    \f
 
     Args:
-        filename: The file name to be deleted [optional]
-
+        limit (int): The number of lines to return.
+        earliest: How far back to look in time.
+        latest: No more recent than this point in time.
+        deployment: deployment ID.
     """
-    if filename is not None:
-        fullpath = get_config_file_path(__app_name__, filename)
-        delete_config_file(fullpath)
-    else:
-        delete_config_file(jwt_cache_path(__app_name__))
+    # Get operator client
+    client = Client()
+
+    # request params
+    params = {
+            "deployment_id": deployment,
+            "limit": limit,
+            "start": None,
+            "end": None,
+            }
+
+    # Calculate time deltas
+    for key, time_range in [("start", earliest), ("end", latest)]:
+        if time_range is None:
+            continue
+        if time_range.endswith("s"):
+            delta = timedelta(seconds=int(time_range.replace("s", "")))
+        elif time_range.endswith("m"):
+            delta = timedelta(minutes=int(time_range.replace("m", "")))
+        elif time_range.endswith("h"):
+            delta = timedelta(hours=int(time_range.replace("h", "")))
+        elif time_range.endswith("d"):
+            delta = timedelta(days=int(time_range.replace("d", "")))
+        elif time_range.endswith("w"):
+            delta = timedelta(weeks=int(time_range.replace("w", "")))
+        else:
+            info("Unsupported unit of time, using default range.")
+            continue
+
+        # use UTC offset
+        dt = datetime.now() - datetime.now(timezone.utc).astimezone().utcoffset()  # pylint: disable=C0103
+        dt = dt - delta  # pylint: disable=C0103
+        params.update({key: dt.isoformat()})
+
+    # Get endpoints
+    response_data = client.get(
+        "logs",
+        params=params
+    ).json()
+
+    # check if any data was returned, and if not, inform the user about time ranges
+    if not response_data:
+        info("""No logs were returned. Try increasing the time range, see 'inferex logs --help' for information on options.""")  # pylint: disable=C0301
+
+    display_logs(response_data)
 
 
-@app.command("deploy", help="🚀 Deploy a project.")
-def deploy(
-    path: Optional[str] = typer.Argument(
-        ".", help="Full or relative path to project folder."
-    ),
-):
-    """This will bundle an application and submit it for processing
-
-    Args:
-        path: The filesystem path to the project directory root, containing an inferex.yaml
-
-    Raises:
-        Exit: Used to signal to typer framework that the main application thread
-              should terminate, and return <int> to the OS
-    """
-
-    target_dir = normalize_project_dir(path)
-    if not (target_dir / "inferex.yaml").is_file():
-        info(f"inferex.yaml file was not found, writing one to {target_dir}")
-        init(target_dir, target_dir.resolve().name)
-
-    try:
-        valid_inferex_project(target_dir)
-    except ConfigInvalid as inv_cfg:
-        error(f"Configuration error for file {target_dir}/inferex.yaml, {inv_cfg}\n")
-        raise typer.Exit(1)
-
-    sha = git_sha(target_dir)
-    run_deploy(target_dir, git_sha=sha)
+@cli.command("reset")
+def reset():
+    """ ❌ Deletes the token.json file created at login."""
+    client = Client()
+    client.reset()
 
 
-def version_callback(value: bool):
-    """Eager function to print the version info and terminate
-
-    Args:
-        value: Supplied by typer in callback
-
-    Raises:
-        Exit: Typer exit exception to terminate app
-    """
-    if value:
-        typer.echo(f"inferex v{__version__}")
-        raise typer.Exit()
+# Add subcommands to the "cli" group.
+from inferex.projects.cli import commands as project_commands  #  pylint: disable=C0413
+from inferex.deployments.cli import commands as deployment_commands  #  pylint: disable=C0413
+from inferex.endpoints.cli import commands as endpoint_commands  #  pylint: disable=C0413
+cli.add_command(project_commands)
+cli.add_command(deployment_commands)
+cli.add_command(endpoint_commands)
 
 
-@app.callback(invoke_without_command=True)
-def main(
-    _version: Optional[bool] = typer.Option(
-        None,
-        "--version",
-        callback=version_callback,
-        is_eager=True,
-        help="Display version number.",
-    ),
-) -> None:
-    """Init, deploy, and manage your projects with Inferex."""
-    # 'inferex' by itself was invoked.
-    if len(sys.argv) == 1:
-        typer.echo("Enter 'inferex --help' for a list of commands.")
-        raise typer.Exit()
+if __name__ == "__main__":
+    cli()

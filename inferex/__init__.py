@@ -1,8 +1,12 @@
 """ Top-level package for Inferex CLI """
 
 __app_name__ = "inferex"
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
+from inferex.api.client import Client
 from inferex.decorator.inferex import pipeline
 
-__all__ = ["pipeline"]
+__all__ = [
+    "Client",
+    "pipeline",
+]
