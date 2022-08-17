@@ -10,27 +10,27 @@ from inferex.io.output import handle_output, output_option, OutputType
 
 
 @click.group("endpoints", invoke_without_command=True)
-@click.argument("deployment_id")
+@click.argument("git_sha")
 @output_option
 def commands(
-    deployment_id: Optional[int],
+    git_sha: str,
     output: Optional[OutputType],
 ):
     u"""\b
     📞 List endpoints for a deployment.
 
-    'inferex endpoints <deployment_id>' -> list of endpoints of a deployment.
+    'inferex endpoints <git_sha>' -> Endpoints of a deployment having <git_sha>.
     \f
 
     Args:
-        deployment_id (int): The ID of a deployment.
+        git_sha (str): The git sha of a deployment.
         output (str): The output format. Defaults to "table".
     """
     # Get operator client and GET endpoints
     client = Client()
     response_data = client.get(
         "endpoints",
-        params={"deployment_id": deployment_id}
+        params={"git_sha": git_sha}
     ).json()
     if "errors" in response_data:
         click.echo(response_data.get("errors"), err=True)

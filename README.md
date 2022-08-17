@@ -2,7 +2,7 @@
 
 Deploy and manage your AI projects on Inferex infrastructure.
 
-[Please see our online documentation for a tutorial.](https://docs.inferex.com/)
+[See our online documentation for a tutorial.](https://docs.inferex.com/)
 
 ## Installation
 
@@ -13,24 +13,28 @@ pip install inferex
 You can invoke "inferex --help" for a list of commands. Each command may have
 subcommands, which can be called with "--help" as well.
 
-Version 0.0.5:
+Version 0.0.6:
 
 ```bash
 Usage: inferex [OPTIONS] COMMAND [ARGS]...
 
-  Init, deploy, and manage your projects with Inferex.
+  Inferex CLI is a tool that enables AI companies to rapidly deploy pipelines.
+  Init, deploy, and manage your projects with Inferex. Invoke "inferex --help"
+  for a list of commands.
 
 Options:
-  --version  Display version number.
+  --version  Show the version and exit.
   --help     Show this message and exit.
 
 Commands:
-  delete  🗑️ Delete projects, deployments, and endpoints.
-  deploy  🚀 Deploy a project.
-  get     🌎 Get information about Inferex resources.
-  login   🔑 Fetches your API key from the server.
-  logs    🗒️ Get logs from Inferex deployments.
-  reset   ❌ Deletes files created at login
+  deploy      🚀 Deploy a project.
+  deployment  🌎 Manage Inferex deployments.
+  endpoints   📞 List endpoints for a deployment.
+  init        ✨ Initializes a new project.
+  login       🔑 Fetch api key via username & password authentication.
+  logs        📃 Get logs from Inferex deployments.
+  projects    📁 Manage Inferex projects.
+  reset       ❌ Deletes the token.json file created at login.
 ```
 
 ## CLI - Basic usage
@@ -41,24 +45,9 @@ Commands:
    requirements.txt files.
 
 1. Run the "inferex login" command to log in with your inferex account
-   automatically save your token locally.
+   and save your token locally.
 
 1. Run "inferex deploy". This will create a tar archive of your project folder
    and send it to the server for processing.
 
-## Troubleshooting
-
-Having issues? Try confirming these variables:
-
-- What is your current working directory?
-- What python interpreter is being used (in bash:  'which python')?
-- Do you have a token saved locally? Check this folder depending on your OS:
-
-```plaintext
-Mac OS X:               ~/Library/Application Support/inferex
-Mac OS X (POSIX):       ~/.inferex
-Unix:                   ~/.config/inferex
-Unix (POSIX):           ~/.inferex
-Windows (roaming):      C:\Users\<user>\AppData\Roaming\inferex
-Windows (not roaming):  C:\Users\<user>\AppData\Local\inferex
-```
+That's it! `inferex deployments` will list your deployed projects and their URLs.

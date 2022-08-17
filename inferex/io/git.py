@@ -6,21 +6,22 @@ import shutil
 import string
 import tempfile
 from pathlib import Path
+from datetime import datetime
 
 import click
 from dirhash import dirhash
 
 try:
     import git
-    from git import InvalidGitRepositoryError
+    from git import InvalidGitRepositoryError, GitCommandError
 except ImportError:
     InvalidGitRepositoryError = ValueError
-    click.echo("Git is not installed, please install it to use this feature.", err=True)
+    GitCommandError = ValueError
 
 from inferex.io.termformat import error, info
 
-SHORT_SHA_LENGTH = 8
 
+SHORT_SHA_LENGTH = 8
 
 # TODO: same as client.py:40
 IGNORED_PATTERNS = [
@@ -87,6 +88,7 @@ def git_sha(target_dir: Path, randomize=False) -> str:
         ValueError,  # ValueError repo exists, but has no commits
         NameError,  # NameError git not installed
     ):
+        click.echo("GitPython is not installed, please install it to use this feature.", err=True)
         # Compute the hash ourselves
         deployment_sha = dirhash(
             target_dir,
@@ -99,6 +101,31 @@ def git_sha(target_dir: Path, randomize=False) -> str:
         rand_string = ''.join(
             random.choice(string.ascii_lowercase + string.digits) for _ in range(3)
         )
-        deployment_sha = deployment_sha + "-" + rand_string
+        deployment_sha = f"{deployment_sha}-{rand_string}"
 
     return deployment_sha
+
+
+def get_commit_sha_and_date():
+    """
+    Get the git sha and date and return a formatted string.
+
+    Returns:
+        version_and_date_string (str): a formatted string containing the first
+            7 characters of git commit sha and its date.
+    """
+    import inferex
+    PROJECT_ROOT = os.path.abspath(os.path.dirname(inferex.__file__))
+    target_directory = Path(os.path.abspath(PROJECT_ROOT)).parent
+    try:
+        git_repo = git.Git(target_directory)
+        timestamp = git_repo.log("-1", "--format=%at")
+        timestamp = datetime.fromtimestamp(int(timestamp))
+        date_str = timestamp.strftime("%Y-%m-%d")
+        repo = git.Repo(target_directory)
+        sha = repo.head.object.hexsha[:7]
+        version_and_date_string = f"({sha}, {date_str})"
+    except (InvalidGitRepositoryError, GitCommandError, NameError):
+        # git is not installed
+        return ""
+    return version_and_date_string

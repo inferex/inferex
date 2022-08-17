@@ -12,11 +12,16 @@ from inferex.io.termformat import info
 from inferex.io.output import display_logs
 from inferex.help.help_texts import TIME_HELP_TEXT
 from inferex.utils import disable_user_prompts
+from inferex.projects.cli import commands as project_commands
+from inferex.deployments.cli import commands as deployment_commands
+from inferex.deployments.cli import deployments
+from inferex.endpoints.cli import commands as endpoint_commands
+from inferex.io.git import get_commit_sha_and_date
 
 
 # CLI
 @click.command(cls=AliasedGroup, name="inferex")
-@click.version_option(version=__version__)
+@click.version_option(version=f"{__version__} {get_commit_sha_and_date()}")
 def cli():
     """
     Inferex CLI is a tool that enables AI companies to rapidly deploy pipelines.
@@ -117,32 +122,32 @@ def deploy(force: bool, token: Optional[str], path: Optional[str]):
 )
 @click.option("--earliest", default=None, help=TIME_HELP_TEXT)
 @click.option("--latest", default=None)
-@click.argument("deployment")
+@click.argument("git_sha")
 def logs(
     limit: Optional[int],
     earliest: Optional[str],
     latest: Optional[str],
-    deployment: int,
+    git_sha: str,
 ):
     """\b
     📃 Get logs from Inferex deployments.
-    E.g., 'inferex logs <deployment>'
+    E.g., 'inferex logs <git_sha>'
 
-    deployment: deployment ID to get logs from (required).
+    git_sha: Git sha of the deployment to get logs from (required).
     \f
 
     Args:
         limit (int): The number of lines to return.
         earliest: How far back to look in time.
         latest: No more recent than this point in time.
-        deployment: deployment ID.
+        git_sha: Git sha of a deployment.
     """
     # Get operator client
     client = Client()
 
     # request params
     params = {
-            "deployment_id": deployment,
+            "git_sha": git_sha,
             "limit": limit,
             "start": None,
             "end": None,
@@ -169,7 +174,7 @@ def logs(
         # use UTC offset
         dt = datetime.now() - datetime.now(timezone.utc).astimezone().utcoffset()  # pylint: disable=C0103
         dt = dt - delta  # pylint: disable=C0103
-        params.update({key: dt.isoformat()})
+        params[key] = dt.isoformat()
 
     # Get endpoints
     response_data = client.get(
@@ -179,7 +184,16 @@ def logs(
 
     # check if any data was returned, and if not, inform the user about time ranges
     if not response_data:
-        info("""No logs were returned. Try increasing the time range, see 'inferex logs --help' for information on options.""")  # pylint: disable=C0301
+        info("No logs were returned. Try increasing the time range, see "
+             "'inferex logs --help' for information on options."
+        )
+
+    if "error" in response_data or "errors" in response_data:
+        # Currently Loki returns a response with "error" as a key
+        # In the future, we plan on putting error messages in one place,
+        # keyed as "errors".
+        info(f"Error with querying logs. {response_data}")
+        sys.exit(1)
 
     display_logs(response_data)
 
@@ -192,11 +206,9 @@ def reset():
 
 
 # Add subcommands to the "cli" group.
-from inferex.projects.cli import commands as project_commands  #  pylint: disable=C0413
-from inferex.deployments.cli import commands as deployment_commands  #  pylint: disable=C0413
-from inferex.endpoints.cli import commands as endpoint_commands  #  pylint: disable=C0413
 cli.add_command(project_commands)
 cli.add_command(deployment_commands)
+cli.add_command(deployments)
 cli.add_command(endpoint_commands)
 
 

@@ -24,12 +24,12 @@ CONFIG_DISPLAY_TABLE = {
 DISPLAY_COLUMNS = {
     'projects': ["id", "name", "added_at"],
     'deployments':[
-        "id", "project_name", "deployment_status", "added_at",
-        "deployment_url", "version", "git_sha"
+        "git_sha", "project_name", "deployment_status", "added_at",
+        "deployment_url", "version", "id"
         ],
     'endpoints': [
-        "id", "deployment_id", "project_name", "deployment_status",
-        "added_at", "url", "version", "git_sha", "is_async"
+        "id", "git_sha", "project_name", "deployment_status",
+        "added_at", "url", "version", "is_async"
         ],
 }
 

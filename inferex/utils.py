@@ -15,7 +15,7 @@ class AliasedGroup(click.Group):
             return None
         if len(matches) == 1:
             return click.Group.get_command(self, ctx, matches[0])
-        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+        ctx.fail(f"Too many command matches: {', '.join(sorted(matches))}. Try using one of these commands.")
 
 
 def deactivate_prompts(ctx, _param, value):
