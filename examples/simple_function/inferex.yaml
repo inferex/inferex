@@ -3,4 +3,4 @@ project:
   name: SimpleFunction
 
 scaling:
-  replicas: 2
+  replicas: 1

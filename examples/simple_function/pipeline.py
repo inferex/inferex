@@ -2,12 +2,9 @@
 Example runables for testing.
 """
 
-from inferex import pipeline
+import inferex
 
 
-@pipeline(endpoint="/simple-function")
+@inferex.pipeline(name="simple-function")
 def simple_function(payload: dict) -> dict:
-    """
-    Simplest function possible
-    """
     return payload

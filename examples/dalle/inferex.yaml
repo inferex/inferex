@@ -1,0 +1,6 @@
+
+project:
+  name: DallE
+
+scaling:
+  replicas: 1

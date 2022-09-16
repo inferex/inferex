@@ -3,7 +3,7 @@ Example runables for testing.
 """
 import transformers
 
-from inferex import pipeline
+import inferex
 
 
 class SentimentAnalysisPipeline:
@@ -16,7 +16,7 @@ class SentimentAnalysisPipeline:
         # load model
         self.model = transformers.pipeline(task="sentiment-analysis")
 
-    @pipeline(endpoint="/sentiment-analysis")
+    @inferex.pipeline(name="sentiment-analysis")
     def infer(self, payload: dict) -> dict:
         """
         Performs inference on the payload.

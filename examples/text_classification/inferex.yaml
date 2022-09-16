@@ -3,4 +3,4 @@ project:
   name: TextClassification
 
 scaling:
-  replicas: 2
+  replicas: 1

@@ -3,7 +3,7 @@ Example runables for testing.
 """
 import transformers
 
-from inferex import pipeline
+import inferex
 
 
 class TextClassificationPipeline:
@@ -16,7 +16,7 @@ class TextClassificationPipeline:
         # load model
         self.model = transformers.pipeline(task="text-classification")
 
-    @pipeline(endpoint="/text-classification")
+    @inferex.pipeline(name="text-classification")
     def infer(self, payload: dict) -> dict:
         """
         Performs inference on the payload.

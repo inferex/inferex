@@ -4,7 +4,7 @@ Intended usage:
 
     import inferex
 
-    @inferex.pipeline(endpoint="email-image-inference")
+    @inferex.pipeline(name="email-image-inference")
     def func(args):
         return f"Args: {args}"
 
@@ -12,4 +12,4 @@ Intended usage:
 
 from .decorators import pipeline
 
-__all__ = ["pipeline"]
+__all__ = ['pipeline']

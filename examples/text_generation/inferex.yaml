@@ -3,4 +3,4 @@ project:
   name: TextGeneration
 
 scaling:
-  replicas: 2
+  replicas: 1

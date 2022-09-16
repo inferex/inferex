@@ -3,7 +3,7 @@
 import traceback
 
 from inferex import __app_name__
-from inferex.cli import cli
+from inferex import cli
 
 
 def main():

@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "inferex"
-version = "0.0.6"
+version = "0.0.7"
 description = "Inferex CLI - Init, deploy and manage your projects on Inferex infrastructure"
 authors = ["Greg <greg@inferex.com>"]
 packages = [{ include = "inferex" }]
@@ -28,6 +28,8 @@ tqdm = "^4.64.0"
 Pygments = "^2.12.0"
 dirhash = "^0.2.1"
 click = "^8.1.3"
+pydantic = "^1.9.2"
+python-dotenv = "^0.20.0"
 
 [tool.poetry.dev-dependencies]
 coverage = {extras = ["toml"], version = "^6.4.1"}

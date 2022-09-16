@@ -13,7 +13,7 @@ pip install inferex
 You can invoke "inferex --help" for a list of commands. Each command may have
 subcommands, which can be called with "--help" as well.
 
-Version 0.0.6:
+Version 0.0.7:
 
 ```bash
 Usage: inferex [OPTIONS] COMMAND [ARGS]...
@@ -29,7 +29,7 @@ Options:
 Commands:
   deploy      🚀 Deploy a project.
   deployment  🌎 Manage Inferex deployments.
-  endpoints   📞 List endpoints for a deployment.
+  pipelines   📞 List pipelines for a deployment.
   init        ✨ Initializes a new project.
   login       🔑 Fetch api key via username & password authentication.
   logs        📃 Get logs from Inferex deployments.
