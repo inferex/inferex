@@ -25,12 +25,12 @@ DISPLAY_COLUMNS = {
     'projects': ["name", "added_at"],
     'deployments':[
         "git_sha", "project_name", "deployment_status", "added_at",
-        "deployment_url", "version"
-        ],
+        "deployment_url", "version",
+    ],
     'pipelines': [
         "git_sha", "project_name", "deployment_status",
-        "added_at", "url", "version", "is_async"
-        ],
+        "added_at", "url", "version", "is_async",
+    ],
 }
 
 # control what columns are renamed as here

@@ -1,7 +1,7 @@
 """ Top-level package for Inferex CLI """
 
 __app_name__ = "inferex"
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 import logging
 from logging import NullHandler

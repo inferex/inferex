@@ -13,7 +13,7 @@ pip install inferex
 You can invoke "inferex --help" for a list of commands. Each command may have
 subcommands, which can be called with "--help" as well.
 
-Version 0.0.7:
+Version 0.0.8:
 
 ```bash
 Usage: inferex [OPTIONS] COMMAND [ARGS]...

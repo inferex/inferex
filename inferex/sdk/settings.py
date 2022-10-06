@@ -16,7 +16,7 @@ class ClientSettings(BaseSettings):
 
     config_path: Path = Field(default=Path(get_app_dir(__app_name__)) / "config.json")
     api_token: str = Field(default="", env='INFEREX_TOKEN')
-    base_url: str = Field(default="https://api.inferex.net", env="INFEREX_API")
+    base_url: str = Field(default="https://api.inferex.com", env="INFEREX_API")
     api_vers: str = Field(default="", env="INFEREX_API_VERSION")
 
     def __init__(self, *args, **kwargs):

@@ -9,6 +9,10 @@ import click
 from inferex.sdk.resources import deployment
 from inferex.utils.io.output import output_option, OutputFormat, handle_output
 from inferex.utils.io.utils import get_project_config, error
+from inferex.cli.utils import fetch_and_handle_response
+
+
+URL_PATH = "deployments"
 
 @click.group("deployment")
 def commands():
@@ -27,16 +31,8 @@ def get(git_sha: str, output: Optional[OutputFormat]):
     Args:
         git_sha (str): The git sha of the deployment.
     """
-    response = deployment.get(git_sha_=git_sha)
-    if not response.ok:
-        error(
-            f"""Something went wrong with getting the deployment.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-        )
-        sys.exit()
-
-    handle_output(response.json(), output, "deployments")
+    response_data = fetch_and_handle_response(deployment.get, URL_PATH, git_sha)
+    handle_output(response_data, output, URL_PATH)
 
 
 @commands.command("delete")
@@ -81,7 +77,7 @@ def delete(deployment_shas: str, all_: bool, force: bool, output: Optional[Outpu
             continue
         deleted_deployments.append(response.json())
 
-    handle_output(deleted_deployments, output, "deployments")
+    handle_output(deleted_deployments, output, URL_PATH)
 
 
 @commands.command("ls")
@@ -130,20 +126,8 @@ def deployments(
         project_config = get_project_config(project)
         project = project_config.get("project", {}).get("name", project)
 
-    response = deployment.get(git_sha, project)
-    if not response.ok:
-        error(
-            f"""Something went wrong with fetching the deployment.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-        )
-        sys.exit()
-
-    if not response.json():
-        click.echo("No deployments found.")
-        sys.exit()
-
-    handle_output(response.json(), output, "deployments")
+    response_data = fetch_and_handle_response(deployment.get, URL_PATH, git_sha, project)
+    handle_output(response_data, output, URL_PATH)
 
 
 if __name__ == "__main__":

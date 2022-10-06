@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "inferex"
-version = "0.0.7"
+version = "0.0.8"
 description = "Inferex CLI - Init, deploy and manage your projects on Inferex infrastructure"
 authors = ["Greg <greg@inferex.com>"]
 packages = [{ include = "inferex" }]

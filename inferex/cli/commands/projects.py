@@ -8,9 +8,11 @@ import click
 
 from inferex.sdk.resources import project
 from inferex.utils.io.output import OutputFormat, output_option, handle_output
-from inferex.utils.io import get_project_config
 from inferex.utils.io import error
+from inferex.cli.utils import fetch_and_handle_response
 
+
+URL_PATH = "projects"
 
 @click.group("project")
 def commands():
@@ -19,50 +21,38 @@ def commands():
     """
 
 @commands.command("get")
-@click.argument("project_name")
+@click.argument("name")
 @output_option
-def get(project_name: int, output: Optional[OutputFormat]):
+def get(name: str, output: Optional[OutputFormat]):
     """
-    Get project status by its NAME.
+    Get project status by name.
 
     \f
     Args:
-        index (str): The index of the project.
+        name (str): The name of the project.
+        output (str): The output format. Defaults to "table".
     """
-    response = project.list(project_name)
-    if not response.ok:
-        error(
-            f"""Something went wrong with the request.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-        )
-        sys.exit()
-
-    response_data = response.json()
-    if not response_data and output == OutputFormat.table:
-        # temp/hotfix until jsonapi.org spec is implemented
-        click.echo(f"No deployments found for <project_name:{project_name}>")
-        sys.exit()
-
-    handle_output(response_data, output, "projects")
+    response_data = fetch_and_handle_response(project.list, URL_PATH, name)
+    handle_output(response_data, output, URL_PATH)
 
 
 @commands.command("delete")
-@click.argument("indices", nargs=-1)
+@click.argument("names", nargs=-1, required=False)
 @click.option("-all", "-a", "--delete-all", is_flag=True)
 @click.option("--force", is_flag=True, prompt="Some projects may have running deployments. Are you sure you want to delete them?")
 @output_option
-def delete(indices: str, delete_all: bool, force: bool, output: Optional[OutputFormat]):
+def delete(names: str, delete_all: bool, force: bool, output: Optional[OutputFormat]):
     """
-    Delete a project by INDEX.
+    Delete a project by name.
 
     \f
     Args:
-        indices(str): The list of INDEX's of the project.
+        names  (str): The list of names of the project.
         output (str): The output format. Defaults to "table".
     """
     if not force:
         return
+
     if delete_all:
         response = project.get()
         if not response.ok:
@@ -72,28 +62,28 @@ def delete(indices: str, delete_all: bool, force: bool, output: Optional[OutputF
                     Message: {response.json()}"""
             )
             sys.exit()
-        indices = [proj["id"] for proj in response.json()]
+        names = [proj["name"] for proj in response.json()]
 
     deleted_projects = []
-    for index in indices:
-        response = project.delete(index)
+    for name in names:
+        response = project.delete(name)
         if not response.ok:
             error(
-                f"""Something went wrong with the deleting id:{index}.
+                f"""Something went wrong with the deleting of project: '{name}'.
                     Status code: {response.status_code}
                     Message: {response.json()}"""
             )
             continue
         deleted_projects.append(response.json())
 
-    handle_output(deleted_projects, output, "projects")
+    handle_output(deleted_projects, output, URL_PATH)
 
 
 @click.command("projects", hidden=True)
-@click.option("--project-name", help="Filter on a project name")
+@click.option("--name", help="Filter on a project name")
 @output_option
 def projects(
-    project_name: Optional[str],
+    name: Optional[str],
     output: Optional[OutputFormat],
 ):
     """
@@ -101,25 +91,11 @@ def projects(
 
     \f
     Args:
-        project_name (str): Project name or path to project folder.
+        name (str): Project name or path to project folder.
         output (str): The output format. Defaults to "table".
     """
-    if project_name:
-        project_config = get_project_config(project_name)
-        # Get project name from argument or project config file.
-        # project name can be a path or the project's name
-        project_name = project_config.get("project", {}).get("name", project_name)
-
-    response = project.list(name=project_name)
-    if not response.ok:
-        error(
-            f"""Something went wrong with listing projects.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-        )
-        sys.exit()
-
-    handle_output(response.json(), output, "projects")
+    response_data = fetch_and_handle_response(project.list, URL_PATH, name)
+    handle_output(response_data, output, URL_PATH)
 
 
 if __name__ == "__main__":

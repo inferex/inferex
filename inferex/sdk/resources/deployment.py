@@ -5,16 +5,17 @@ import tempfile
 import time
 
 from requests import Response
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
 from inferex.sdk.resources.base_models import DeploymentBase, PipelineBase
 from inferex.sdk.resources import project
 from inferex.sdk.resources import pipeline
 from inferex.utils.io.logs import get_logger
-from inferex.utils.io.utils import get_project_config
+from inferex.utils.io.utils import get_project_config, validate_pipelines
 from inferex.utils.io.git import git_sha
 from inferex.utils.io.compression import make_archive
 from inferex.sdk.http import api_session, create_multipart_encoder_monitor
+from inferex.sdk.exceptions import DeployFailureError
+from inferex.utils.io.scanning import validate_requirements_txt, RequirementsValidationException
 
 
 logger = get_logger(__name__)
@@ -26,7 +27,14 @@ class Deployment(DeploymentBase):
     """
     def deploy(self) -> DeploymentBase:
         """ Deploy the object to the server. """
-        response = deploy(**self.dict())
+        try:
+            response = deploy(**self.dict())
+        except RequirementsValidationException as exc:
+            logger.warning(f"{exc}")
+        except DeployFailureError as exc:
+            logger.error(f"Error validating pipeline source code - {exc}")
+            raise
+
         deployed_deployment = Deployment(**response.json())
         return deployed_deployment
 
@@ -94,12 +102,32 @@ def deploy(path: str, token: Optional[str] = None, force: bool = False, stream: 
             project (hash of project) exists. Appends a random string of
             the form -xxx" to the deployment git sha.
         stream (bool): Stream the logs of the deployment.
+    Raises:
+        DeployFailureError
     Returns:
         response: requests response object.
     """
     # Ensure Path
-    logger.info(f"Deploying project: {path}")
     path = Path(path).resolve()
+    logger.info(f"Deploying project: {path}")
+
+    # validate pipelines are defined correctly
+    try:
+        validate_pipelines(path)
+    except (ValueError, OSError) as exc:
+        raise DeployFailureError(str(exc))
+
+    except Exception as exc:
+        logger.error(f"Exception - {exc}")
+        raise DeployFailureError(str(exc))
+
+    # validate imports against requirements.txt
+    try:
+        validate_requirements_txt(path)
+    except RequirementsValidationException as exc:
+        logger.error(f"Error validating requirements.txt - {exc}")
+        # raise DeployFailureError(str(exc))  # TODO: handle edge cases
+        raise
 
     # Validate project directory
     project_config = get_project_config(path)
@@ -111,7 +139,13 @@ def deploy(path: str, token: Optional[str] = None, force: bool = False, stream: 
         logger.info(f"inferex.yaml file was not found, project name defaulting to: {project_name}")
 
     # Post project name to the API
-    project.create(name=project_name, token=token)
+    response = project.create(name=project_name, token=token)
+    if not response.ok:
+        raise DeployFailureError(
+            f"Creating project {project_name} failed."
+            f"status_code: {response.status_code}"
+        )
+    validated_project_name = response.json().get('name')
 
     # Get the SHA of the project / or generate a new one if it doesn't exist
     git_commit_sha = git_sha(path, randomize=force)  # TODO: rename to deployment_sha
@@ -126,7 +160,7 @@ def deploy(path: str, token: Optional[str] = None, force: bool = False, stream: 
         # Pass through deployment.token to request headers
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         deploy_params = {
-            "project_name": project_name,
+            "project_name": validated_project_name,
             "git_commit_sha": git_commit_sha,
             "stream": stream,
         }

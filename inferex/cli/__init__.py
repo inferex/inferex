@@ -9,21 +9,17 @@ import click
 import yaml
 
 from inferex import __version__
-from inferex.utils.io.git import get_commit_sha_and_date
-from inferex.sdk.resources import deployment
-from inferex.sdk.resources import log
+from inferex.sdk.resources import deployment, log
 from inferex.sdk.http import login
-from inferex.cli.utils import AliasedGroup
-from inferex.utils.io import error, success, default_project
-from inferex.utils.io.output import display_logs, TIME_HELP_TEXT
-from inferex.cli.commands.projects import commands as project_commands
-from inferex.cli.commands.projects import projects
-from inferex.cli.commands.deployments import commands as deployment_commands
-from inferex.cli.commands.deployments import deployments
+from inferex.cli.utils import AliasedGroup, fetch_and_handle_response
+from inferex.utils.io import error, success, default_project, display_logs, TIME_HELP_TEXT, get_commit_sha_and_date
+from inferex.cli.commands.projects import commands as project_commands, projects
+from inferex.cli.commands.deployments import commands as deployment_commands, deployments
 from inferex.cli.commands.pipelines import pipelines
 from inferex.cli.utils import disable_user_prompts
 from inferex.sdk.settings import settings
-
+from inferex.sdk.exceptions import DeployFailureError
+from inferex.utils.io.scanning import RequirementsValidationException
 
 
 @click.command(cls=AliasedGroup, name="inferex")
@@ -103,12 +99,13 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
         password = sys.stdin.read().strip()
 
     if not username or not password:
-        click.echo(f"Username or password not supplied. Env variables will be checked for credentials...")
+        click.echo("Username or password not supplied. Env variables will be checked for credentials...")
 
-    result = login(username=username, password=password)
-    if result == 1:
-        error("Login failed")
-        sys.exit(0)
+    try:
+        login(username=username, password=password)
+    except Exception as exc:
+        error(f"Login failed - {exc}")
+        sys.exit()
 
     click.echo("🔑 Authenticated with provided credentials.")
 
@@ -127,8 +124,9 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
 @click.option(
     "--stream",
     is_flag=True,
-    default=False,
-    help="Runs deployment in the foreground and streams logs."
+    default=True,
+    help="Runs deployment in the foreground and streams logs.",
+    show_default=True
 )
 @click.argument("path", default=".")
 def deploy(force: Optional[bool], token: Optional[str], path: str, stream: Optional[bool]):
@@ -148,7 +146,18 @@ def deploy(force: Optional[bool], token: Optional[str], path: str, stream: Optio
     """
     click.echo("🐳 Preparing project...")
     start_time = time.time()
-    response_or_stream = deployment.deploy(path, token, force=force, stream=stream)
+    try:
+        response_or_stream = deployment.deploy(path, token, force=force, stream=stream)
+    except DeployFailureError as exc:
+        error(f"Deploy failed: {exc}")
+        sys.exit()
+    except RequirementsValidationException as exc:
+        click.echo(f"Dependency issue with project - {exc}")
+        sys.exit()
+    except Exception as exc:
+        error(str(exc))
+        sys.exit()
+
     deploy_seconds = time.time() - start_time
     if stream:
         for log in response_or_stream:
@@ -233,15 +242,7 @@ def logs(
         )
         sys.exit()
 
-    response_data = response.json()
-    # check if any data was returned, and if not, inform the user about time ranges
-    # TODO: Move these messages to http session response hooks.
-    if not response_data:
-        click.echo(
-            "No logs were returned. Try increasing the time range, see "
-             "'inferex logs --help' for information on options."
-        )
-
+    response_data = fetch_and_handle_response(log.get, "logs", **params)
     display_logs(response_data)
 
 

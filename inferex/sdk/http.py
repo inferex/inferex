@@ -10,6 +10,7 @@ from typing import Union, BinaryIO
 import requests
 from requests import Response
 from requests.adapters import HTTPAdapter, Retry
+from requests.exceptions import RequestException
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from tqdm import tqdm
 import yaspin
@@ -18,6 +19,7 @@ from inferex import __version__
 from inferex.sdk.settings import settings
 from inferex.utils.io.logs import get_logger
 from inferex.utils.io.termformat import SPINNER_COLOR
+from inferex.sdk.exceptions import InferexApiError
 
 
 logger = get_logger(__name__)
@@ -63,10 +65,21 @@ class ApiClientSession(requests.Session):
             data=data,
             headers=headers
         )
-        except Exception as e:
-            # TODO: Expand on this with high level custom exception classes
-            logger.error(f"{e}")
-            raise e
+        except Exception as exc:
+            logger.error(exc)
+            if hasattr(exc, "response") and hasattr(exc.response, "status_code"):
+                status_code = f"{exc.response.status_code} "
+            else:
+                status_code = ""
+            if 'application/json' in exc.response.headers.get('Content-Type'):
+                detail = exc.response.json().get('detail')
+            else:
+                detail = " "
+            msg = (
+                f"{status_code}{exc.__class__.__name__} "
+                f"on {method} to {self.base_url}/{url_path}{detail}"
+            )
+            raise InferexApiError(msg=msg) from exc
         finally:
             progress_bar.close()
 
@@ -78,7 +91,8 @@ class ApiClientSession(requests.Session):
         on the response's status code.
         """
         level = 20 if resp.status_code < 400 else 40
-        logger.log(level=level, msg=f"Status code: {resp.status_code}, Server msg: {resp.json()}")
+        content = resp.json() if 'application/json' in resp.headers.get('Content-Type') else resp.content
+        logger.log(level=level, msg=f"Status code: {resp.status_code}, Server msg: {content}")
 
     def handle_errors(self, resp: Response, **kwargs) -> Response:  # pylint: disable=W0613
         """
@@ -96,18 +110,17 @@ class ApiClientSession(requests.Session):
         if resp.status_code == requests.codes.unauthorized:  # pylint: disable=E1101
             logger.warning("Unauthorized error. Try obtaining or refreshing the API token.")
             # try logging in with env variables
-            result = init()
-            if result == 1:
+            try:
+                init()
+            except ValueError:
                 resp.raise_for_status()
+
             resp.request.headers['Authorization'] = self.headers['Authorization']
             resp.request.hooks['response'] = [self.log_response]
             retried_request = self.send(resp.request)
             return retried_request
 
-        try:
-            resp.raise_for_status()
-        except requests.exceptions.HTTPError as exc:
-            logger.warning(f"HTTP error on request - {exc}")
+        resp.raise_for_status()
 
     def set_token(self, token):
         self.headers['Authorization'] = f"Bearer {token}"
@@ -116,6 +129,9 @@ class ApiClientSession(requests.Session):
 def init():
     """
     Login with environment variables.
+
+    Raises:
+        ValueError: When either username or password was not given.
 
     Returns:
         login(): Calls login with environment username and password.
@@ -128,7 +144,7 @@ def init():
     password = os.getenv("INFEREX_PASSWORD")
     if username is None or password is None:
         logger.warning("Username or password was not supplied or present in env.")
-        return 1
+        raise ValueError("No username or password provided or present in env.")
 
     return login(username=username, password=password)
 
@@ -143,30 +159,35 @@ def login(**kwargs):
         username (str): User's username.
         password (str): User's password.
 
+    Raises:
+        RequestsException, HTTPError: When the request fails.
+
     Returns:
-        return_code(int): 0 if response succeeded, otherwise 1
+        return_code(int): 0 if response succeeded
     """
     if kwargs.get('username') is None or kwargs.get('password') is None:
         return init()
 
-    # Run login
-    response = requests.post(f"{settings.base_url}/login", data=kwargs)
+    # Run login & handle request exceptions
+    try:
+        response = requests.post(f"{settings.base_url}/login", data=kwargs)
+    except RequestException:
+        raise
 
-    # Handle errored request
+    # Handle bad status code
     if not response.ok:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as exc:
             logger.error(f"HTTP error on request - {exc}")
-        return 1
+            raise
 
     # Get access token from response
     if token := response.json().get("access_token"):
         settings.write_token(token)
         api_session.set_token(token)
 
-    return_code = 0 if response.ok else 1
-    return return_code
+    return 0
 
 
 def start_progress_bar(data: Union[dict, MultipartEncoderMonitor]):

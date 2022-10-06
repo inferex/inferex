@@ -1,7 +1,6 @@
 """
     CLI commands for pipelines.
 """
-import sys
 from typing import Optional
 
 import click
@@ -9,7 +8,10 @@ import click
 from inferex.sdk.resources import pipeline
 from inferex.utils.io.output import handle_output, output_option, OutputFormat
 from inferex.utils.io import error
+from inferex.cli.utils import fetch_and_handle_response
 
+
+URL_PATH = "pipelines"
 
 @click.command("pipelines")
 @click.argument("git_sha")
@@ -28,13 +30,5 @@ def pipelines(
         git_sha (str): The git sha of a deployment.
         output (str): The output format. Defaults to "table".
     """
-    response = pipeline.list(git_sha=git_sha)
-    if not response.ok:
-        error(
-            f"""Something went wrong with listing pipelines.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-        )
-        sys.exit()
-
-    handle_output(response.json(), output, "pipelines")
+    response_data = fetch_and_handle_response(pipeline.list, URL_PATH, git_sha)
+    handle_output(response_data, output, URL_PATH)

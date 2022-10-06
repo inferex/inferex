@@ -36,7 +36,7 @@ class Project(ProjectBase):
 
     def delete(self):
         """ Delete a project. """
-        response = delete(self.project_id)
+        response = delete(self.name)
         deleted_project = Project(**response.json())
         return deleted_project
 
@@ -81,15 +81,15 @@ def list(name: Optional[str] = None) -> Response:  #  pylint: disable=W0622
     return response
 
 
-def delete(project_id: int) -> Response:
+def delete(name: str) -> Response:
     """
     Delete a project.
 
     Args:
-        project_id (int): the ID of the project
+        name (str): the name of the project
     Returns:
         response (Response): requests response object
     """
-    params = {'project_id': project_id}
+    params = {'project_name': name}
     response = api_session.request("DELETE", URL_PATH, params=params)
     return response

@@ -10,6 +10,8 @@ from inferex.utils.io.termformat import (
     success,
     info,
 )
+from inferex.utils.io.output import display_logs, TIME_HELP_TEXT
+from inferex.utils.io.git import get_commit_sha_and_date
 from inferex.utils.io.utils import get_project_config, default_project, ConfigSchemaException
 # TODO: clean this up.
 

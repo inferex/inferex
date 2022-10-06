@@ -20,7 +20,7 @@ def pipeline(
     """
 
     def decorator(func: Callable):
-        """ Decorator for said function.
+        """Decorator for said function.
 
         Args:
             func: The users function to decorate

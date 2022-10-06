@@ -12,4 +12,4 @@ Intended usage:
 
 from .decorators import pipeline
 
-__all__ = ['pipeline']
+__all__ = ["pipeline"]
