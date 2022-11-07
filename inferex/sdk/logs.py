@@ -8,7 +8,7 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 def get_logger(logger_name: str):
     """ Setup and return a logger instance. """
     logger = logging.getLogger(logger_name)
-    development_environment = os.getenv("INFEREX_DEV")
+    development_environment = os.getenv("IX_DEBUG")
     if development_environment:
         handler = logging.StreamHandler()
         log_format = logging.Formatter(LOG_FORMAT, TIME_FORMAT)

@@ -7,7 +7,6 @@ import inferex
 # Load the model
 model = whisper.load_model("base", device="cpu")
 
-
 @inferex.pipeline(name="whisper")
 def whisper(payload: dict) -> dict:
 
@@ -28,5 +27,14 @@ def whisper(payload: dict) -> dict:
 
     return {"text": result["text"]}
 
-
-whisper({"url": "https://basicenglishspeaking.com/wp-content/uploads/audio/QA/QA-01.mp3"})
+# You can call the pipeline by executing the python function directly like this:
+#
+# whisper({"url": "https://basicenglishspeaking.com/wp-content/uploads/audio/QA/QA-01.mp3"})
+#
+# Or you can use curl from the commandline, like this:
+# (Make sure you replace deployment_url with the actual deployment)
+#
+# curl -H "Content-Type: application/json" \
+#      -X POST \
+#      -d '{"url": "https://basicenglishspeaking.com/wp-content/uploads/audio/QA/QA-01.mp3"}' \
+#       https://<deployment_url>/api/simple-function

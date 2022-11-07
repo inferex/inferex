@@ -1,126 +1,68 @@
-""" General IO utils """
+""" Functions for validating Inferex projects. """
 import ast
-from typing import Union, List
-from datetime import datetime, timezone
+import fnmatch
+import os
 from pathlib import Path
+from typing import List, Union
 
-import yaml
-import humanize
-from cerberus import Validator
-
-from inferex.utils.io.termformat import error, info
-from inferex.utils.io.logs import get_logger
-from inferex.utils.io.scanning import get_python_filepaths
+from inferex.sdk.logs import get_logger
 
 
 logger = get_logger(__name__)
 
-class ConfigSchemaException(Exception):
-    """ Exception to raise when errors are encountered in inferex.yaml validation. """
-
-DEPLOYMENT_MEMORY_REGEX = r"(?P<value>\d+)(?:Gi|G)$"
-DEPLOYMENT_CPU_REGEX = r"(?P<value>\d+)m?$"
 VALID_PIPELINE_KWS = ['name', 'is_async', 'timeout', ]
 
-CONFIG_SCHEMA = {
-    "project": {
-        "required": True,
-        "type": "dict",
-        "schema": {"name": {"required": True, "type": "string"}},
-    },
-    "scaling": {
-        "required": False,
-        "type": "dict",
-        "schema": {
-            "replicas": {"required": True, "type": "number", "min": 1, "max": 10},
-            "memory": {
-                "type": "string",
+def pre_walk_dir_check(path: str) -> None:
+    """
+    Check the to-be-deployed directory for .py files up to two levels deep.
+    If there are none, raise an exception.
 
-                "minlength": 2,
-                "maxlength": 20,
-                "regex": DEPLOYMENT_MEMORY_REGEX
-            },
-            "cpu": {
-                "type": ["string", "number"],
-                "minlength": 1,
-                "maxlength": 20,
-                "regex": DEPLOYMENT_CPU_REGEX
-            },
-        },
-    },
-}
-
-
-default_project = {
-    "project": {
-        "name": "untitled"
-    },
-    "scaling": {
-        "replicas": 1
-    },
-}
-
-def get_project_config(project_path: Union[Path, None]) -> dict:
-    """Read inferex.yaml and return the project dictionary
+    Example: a user issues `inferex deploy` from their root directory. Instead
+    of recursively walking all folders and files, exit early.
 
     Args:
-        project_path (Union[Path, None]): path of the project.
-
-    Returns:
-        project_config (dict): the project config.
+        path(str): the project directory to check
 
     Raises:
-        yaml.YAMLError: Raised when loading inferex.yaml file.
-        ConfigSchemaException: Raised when an inferex.yaml schema fails validation.
+        Exception: if there are no python files in the project dir, or in
+                   subfolders 1 level beneath the project dir.
     """
+    project_root_files = list(fnmatch.filter(os.listdir(path), "*.py"))
+    project_root_folders = [p for p in os.listdir(path) if os.path.isdir(p)]
+    subfolder_python_files = []
+    for folder in project_root_folders:
+        subfolder_python_files.extend(list(fnmatch.filter(os.listdir(folder), "*.py")))
 
-    # Ensure the file exists
-    config_path = Path(project_path) / "inferex.yaml"
-    if not config_path.exists():
-        return {}
-
-    # Read the config file
-    try:
-        with open(config_path, "r", encoding="utf-8") as file:
-            project_config = yaml.safe_load(file)
-    except yaml.YAMLError as exc:
-        error(str(exc))
-        raise exc
-
-    # Validate the config file
-    validator = Validator(CONFIG_SCHEMA)
-    valid = validator.validate(project_config)
-    if not valid:
-        error("Project config file is invalid:")
-        info(str(validator.errors))
-        raise ConfigSchemaException
-
-    return project_config
+    if not project_root_files and not subfolder_python_files:
+        raise Exception(
+            f"No python files found in or directly beneath {path}. "
+            "Is this the right directory?"
+        )
 
 
-def get_datetime_age(timestamp: str) -> str:
-    """
-    Get the age of a datetime string relative to local timezone.
+
+def get_python_filepaths(path: str) -> list:
+    """ Given a directory, look for '*.py" files recursively and return a list
+        of filepaths.
 
     Args:
-        timestamp (str): The datetime string.
+        path(str): the project directory to check
 
     Returns:
-        str: The age of the datetime string.
+        python_filepaths(list): a list of fullpaths to python files in the
+            project directory.
     """
-    if not timestamp:
-        return timestamp
+    pre_walk_dir_check(path)
+    python_filepaths = []
+    for root, _, filenames in os.walk(path):
+        python_filepaths.extend(
+            os.path.join(
+                root, filename
+            ) for filename in fnmatch.filter(filenames, "*.py")
+        )
 
-    # Parse the datetime string, split off microseconds
-    utc_time = datetime.strptime(timestamp.split(".")[0], "%Y-%m-%dT%H:%M:%S")
+    return python_filepaths
 
-    # Get the timezone offset
-    timezone_offset = datetime.now(timezone.utc).astimezone().utcoffset()
-
-    # Convert UTC to local time
-    current_age = utc_time + timezone_offset
-
-    return humanize.naturaltime(current_age)
 
 
 def traverse_attribute(node: object) -> Union[str, None]:

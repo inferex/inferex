@@ -17,8 +17,8 @@ import yaspin
 
 from inferex import __version__
 from inferex.sdk.settings import settings
-from inferex.utils.io.logs import get_logger
-from inferex.utils.io.termformat import SPINNER_COLOR
+from inferex.sdk.logs import get_logger
+from inferex.cli.terminal_format import SPINNER_COLOR
 from inferex.sdk.exceptions import InferexApiError
 
 
@@ -71,8 +71,11 @@ class ApiClientSession(requests.Session):
                 status_code = f"{exc.response.status_code} "
             else:
                 status_code = ""
-            if 'application/json' in exc.response.headers.get('Content-Type'):
-                detail = exc.response.json().get('detail')
+            if (
+                hasattr(exc, "response") and exc.response
+                and "application/json" in exc.response.headers.get("Content-Type", {})
+                ):
+                detail = "\n" + exc.response.json().get("detail", "")
             else:
                 detail = " "
             msg = (
@@ -91,7 +94,7 @@ class ApiClientSession(requests.Session):
         on the response's status code.
         """
         level = 20 if resp.status_code < 400 else 40
-        content = resp.json() if 'application/json' in resp.headers.get('Content-Type') else resp.content
+        content = resp.json() if 'application/json' in resp.headers.get('Content-Type', '') else resp.content
         logger.log(level=level, msg=f"Status code: {resp.status_code}, Server msg: {content}")
 
     def handle_errors(self, resp: Response, **kwargs) -> Response:  # pylint: disable=W0613

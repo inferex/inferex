@@ -2,7 +2,7 @@
 from typing import Optional, List
 
 from requests import Response
-from inferex.sdk.resources import deployment
+from inferex.sdk.resources import deployments
 from inferex.sdk.resources.base_models import DeploymentBase, ProjectBase
 from inferex.sdk.http import api_session
 
@@ -42,7 +42,7 @@ class Project(ProjectBase):
 
     def deployments(self) -> List[DeploymentBase]:
         """ List deployments of a project. """
-        return deployment.get(project_name=self.name)
+        return deployments.get(project_name=self.name)
 
 
 def create(name: str, token: Optional[str] = None) -> Response:

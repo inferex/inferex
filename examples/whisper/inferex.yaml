@@ -1,0 +1,9 @@
+
+project:
+  name: Whisper
+
+scaling:
+  replicas: 1
+  memory: 12G
+  cpu: 8
+

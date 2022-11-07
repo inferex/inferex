@@ -1,12 +1,11 @@
 """ Formatting helpers for ERRORS / SUCCESS / LOG messages to be written to console """
 import click
 
+
 TAB_CHAR = "  "  # Taken from legacy term code, not all terminals represent
 # \t as 4 spaces, they vary in [2, 4, 8]
 
-
 SPINNER_COLOR = "cyan"
-
 
 def error_style(err: str, indent: int = 0) -> str:
     """Format a string to display as an error

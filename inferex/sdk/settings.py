@@ -6,7 +6,7 @@ from click.utils import get_app_dir
 from pydantic import BaseSettings, Field
 
 from inferex import __app_name__
-from inferex.utils.io.logs import get_logger
+from inferex.sdk.logs import get_logger
 
 
 logger = get_logger(__name__)

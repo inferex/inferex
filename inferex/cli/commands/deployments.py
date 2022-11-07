@@ -1,14 +1,14 @@
 """
     CLI commands for deployments.
 """
-import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 
-from inferex.sdk.resources import deployment
-from inferex.utils.io.output import output_option, OutputFormat, handle_output
-from inferex.utils.io.utils import get_project_config, error
+from inferex.sdk.resources import deployments
+from inferex.cli.display import output_option, OutputFormat, handle_output
+from inferex.cli.terminal_format import error
+from inferex.common.project import get_project_config
 from inferex.cli.utils import fetch_and_handle_response
 
 
@@ -17,116 +17,134 @@ URL_PATH = "deployments"
 @click.group("deployment")
 def commands():
     """
-    🌎  Manage Inferex deployments.
+    🌎  Manage Inferex deployments
     """
 
 @commands.command("get")
-@click.argument("git_sha")
+@click.argument("deployment_sha")
 @output_option
-def get(git_sha: str, output: Optional[OutputFormat]):
+def get(deployment_sha: str, output: Optional[OutputFormat]):
     """
-    Get deployment status by its git sha.
+    Get deployment status by deployment sha
 
     \f
     Args:
-        git_sha (str): The git sha of the deployment.
+        deployment_sha (str): The deployment sha of the deployment.
     """
-    response_data = fetch_and_handle_response(deployment.get, URL_PATH, git_sha)
+    response_data = fetch_and_handle_response(
+        func=deployments.get,
+        path=URL_PATH,
+        git_sha=deployment_sha
+    )
     handle_output(response_data, output, URL_PATH)
 
 
 @commands.command("delete")
 @click.argument("deployment_shas", nargs=-1, required=False)
-@click.option("--all", "all_", is_flag=True)
-@click.option("--force", is_flag=True, prompt="Are you sure you want to delete specified deployment(s)?")
+@click.option("--all", "-a", is_flag=True, help="Delete all deployments.")
+@click.option(
+    "--force",
+    is_flag=True,
+    prompt="Are you sure you want to delete the specified deployment(s)?",
+    help="Force the deletion of deployment."
+)
 @output_option
-def delete(deployment_shas: str, all_: bool, force: bool, output: Optional[OutputFormat]):
+def delete(deployment_shas: Tuple[str], all: bool, force: bool, output: Optional[OutputFormat]):
     """
-    Delete a deployment by its git sha.
+    Delete deployment by deployment SHA
 
     \f
     Args:
-        deployment_shas (str): The ID of the deployment.
+        deployment_shas (str): The SHA of the deployment.
         output (str): The output format. Defaults to "table".
     """
     if not force:
         click.echo("Aborting delete.")
         return
 
-    if all_:
-        # Get all the user's deployment ID's
-        response = deployment.get()
-        if not response.ok:
-            error(
-                f"""Something went wrong with the request.
-                Status code: {response.status_code}
-                Message: {response.json()}"""
-            )
-            sys.exit()
-        deployment_shas = [ud.get('git_sha') for ud in response.json()]
+    if all:
+        # get all of the deployments instead of having to manually pass them in
+        response_data = fetch_and_handle_response(deployments.get, URL_PATH)
+        deployment_shas = [deployment.get('git_sha') for deployment in response_data]
 
     deleted_deployments = []
     for deployment_sha in deployment_shas:
-        response = deployment.delete(deployment_sha)
-        if not response.ok:
-            error(
-                f"""Something went wrong with deleting sha:{deployment_sha}.
-                    Status code: {response.status_code}
-                    Message: {response.json()}"""
+        try:
+            response_data = fetch_and_handle_response(
+                func=deployments.delete,
+                path=URL_PATH,
+                exit_on_error=False,
+                deployment_sha=deployment_sha,
             )
+        except Exception as exc:
+            error(f"Deleting {deployment_sha} could not complete - {exc}")
             continue
-        deleted_deployments.append(response.json())
+        deleted_deployments.append(response_data)
 
-    handle_output(deleted_deployments, output, URL_PATH)
+    if deleted_deployments:
+        handle_output(deleted_deployments, output, URL_PATH)
 
 
 @commands.command("ls")
-@click.argument("git_sha", required=False)
-@click.option("--project")
+@click.argument("deployment_sha", required=False)
+@click.option("--project", default=None, help="Filter deployments by project name.")
 @output_option
 @click.pass_context
 def list_(
     ctx: click.Context,
-    git_sha: Optional[str],
+    deployment_sha: Optional[str],
     project: Optional[str],
     output: Optional[OutputFormat]
 ):
     """
-    List a user's deployments. Filter by project with --project (can be a name or path).
+    \b
+    List user deployments
 
+    \b
+    Aliases: deployments, deploy ls
     \f
     Args:
         ctx: click.Context object.
-        git_sha: Git sha of a deployment.
+        deployment_sha: Deployment sha of a deployment.
         project (str, optional): The project to list deployments of.
         output (str, optional): The output format. Defaults to "table".
     """
-    ctx.invoke(deployments, git_sha=git_sha, project=project, output=output)
+    ctx.invoke(deployments_list, deployment_sha=deployment_sha, project=project, output=output)
 
 
 @click.command("deployments", hidden=True)
-@click.option("--project", default=None)
-@click.argument("git_sha", required=False)
+@click.option(
+    "--project",
+    default=None,
+    help="Filter deployments by project name."
+)
+@click.argument("deployment_sha", required=False)
 @output_option
-def deployments(
+def deployments_list(
     project: Optional[str],
-    git_sha: Optional[str],
+    deployment_sha: Optional[str],
     output: Optional[OutputFormat]
 ):
     """
-    List a user's deployments. Filter by project with --project (can be a name or path).
+    \b
+    List user deployments
 
     \f
     Args:
         project (str, optional): The project to list deployments of.
-        git_sha (str): Git sha of a deployment.
+        deployment_sha (str): Deployment sha of a deployment.
         output (str, optional): The output format. Defaults to "table".
     """
     if project:
         project_config = get_project_config(project)
         project = project_config.get("project", {}).get("name", project)
 
-    response_data = fetch_and_handle_response(deployment.get, URL_PATH, git_sha, project)
+    response_data = fetch_and_handle_response(
+        func=deployments.get,
+        path=URL_PATH,
+        git_sha=deployment_sha,
+        project_name=project
+    )
     handle_output(response_data, output, URL_PATH)
 
 

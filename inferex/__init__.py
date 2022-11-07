@@ -1,7 +1,7 @@
 """ Top-level package for Inferex CLI """
 
 __app_name__ = "inferex"
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 import logging
 from logging import NullHandler
@@ -9,17 +9,17 @@ from logging import NullHandler
 from inferex.decorator.inferex import pipeline
 from inferex.cli import cli
 
-from .sdk.resources import deployment
-from .sdk.resources.deployment import Deployment, deploy
+from .sdk.resources import deployments
+from .sdk.resources.deployments import Deployment, deploy
 
-from .sdk.resources import pipeline
-from .sdk.resources.pipeline import Pipeline
+from .sdk.resources import pipelines
+from .sdk.resources.pipelines import Pipeline
 
-from .sdk.resources import project
-from .sdk.resources.project import Project
+from .sdk.resources import projects
+from .sdk.resources.projects import Project
 
-from .sdk.resources import log
-from .sdk.resources.log import Log
+from .sdk.resources import logs
+from .sdk.resources.logs import Log
 
 from .sdk.http import api_session, init, login
 
@@ -33,17 +33,17 @@ __all__ = [
     "login",
 
     "Deployment",
-    "deployment",
+    "deployments",
     "deploy",
 
     "Pipeline",
-    "pipeline",
+    "pipelines",
 
     "Log",
-    "log",
+    "logs",
 
     "Project",
-    "project",
+    "projects",
 ]
 
 logging.getLogger(__name__).addHandler(NullHandler())

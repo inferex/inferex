@@ -1,23 +1,23 @@
 """
     CLI commands for projects.
 """
-import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 
-from inferex.sdk.resources import project
-from inferex.utils.io.output import OutputFormat, output_option, handle_output
-from inferex.utils.io import error
+from inferex.sdk.resources import projects
+from inferex.cli.display import OutputFormat, output_option, handle_output
+from inferex.cli.terminal_format import error
 from inferex.cli.utils import fetch_and_handle_response
 
 
 URL_PATH = "projects"
 
+
 @click.group("project")
 def commands():
     """
-    🌎  Manage Inferex projects.
+    🌌  Manage Inferex projects
     """
 
 @commands.command("get")
@@ -25,76 +25,113 @@ def commands():
 @output_option
 def get(name: str, output: Optional[OutputFormat]):
     """
-    Get project status by name.
+    Get project status by name
+
+    NAME: The name of the project.
 
     \f
     Args:
         name (str): The name of the project.
         output (str): The output format. Defaults to "table".
     """
-    response_data = fetch_and_handle_response(project.list, URL_PATH, name)
+    response_data = fetch_and_handle_response(
+        func=projects.list,
+        path=URL_PATH,
+        name=name
+    )
     handle_output(response_data, output, URL_PATH)
 
 
 @commands.command("delete")
 @click.argument("names", nargs=-1, required=False)
-@click.option("-all", "-a", "--delete-all", is_flag=True)
-@click.option("--force", is_flag=True, prompt="Some projects may have running deployments. Are you sure you want to delete them?")
+@click.option("--all", "-a", is_flag=True, help="Delete all projects.")
+@click.option(
+    "--force",
+    is_flag=True,
+    prompt="Some projects may have running deployments. Are you sure you want to delete the specified project(s)?",
+    help="Force the deletion of project."
+)
 @output_option
-def delete(names: str, delete_all: bool, force: bool, output: Optional[OutputFormat]):
+def delete(names: Tuple[str], all: bool, force: bool, output: Optional[OutputFormat]):
     """
-    Delete a project by name.
+    Delete project by name
 
     \f
     Args:
-        names  (str): The list of names of the project.
+        names  (tuple): An iterable of project names.
         output (str): The output format. Defaults to "table".
     """
     if not force:
         return
 
-    if delete_all:
-        response = project.get()
-        if not response.ok:
-            error(
-                f"""Something went wrong with fetching projects.
-                    Status code: {response.status_code}
-                    Message: {response.json()}"""
-            )
-            sys.exit()
-        names = [proj["name"] for proj in response.json()]
+    if all:
+        # get all project names instead of having to manually pass them in
+        response_data = fetch_and_handle_response(projects.list, URL_PATH)
+        names = [project.get('name') for project in response_data]
 
     deleted_projects = []
     for name in names:
-        response = project.delete(name)
-        if not response.ok:
-            error(
-                f"""Something went wrong with the deleting of project: '{name}'.
-                    Status code: {response.status_code}
-                    Message: {response.json()}"""
-            )
+        try:
+            response_data = fetch_and_handle_response(
+            func=projects.delete,
+            path=URL_PATH,
+            exit_on_error=False,
+            name=name
+        )
+        except Exception as exc:
+            error(f"Deleting project {name} could not complete - {exc}")
             continue
-        deleted_projects.append(response.json())
+        deleted_projects.append(response_data)
 
-    handle_output(deleted_projects, output, URL_PATH)
+    if deleted_projects:
+        handle_output(deleted_projects, output, URL_PATH)
 
 
-@click.command("projects", hidden=True)
-@click.option("--name", help="Filter on a project name")
+@commands.command("ls")
+@click.option("--name", help="Filter projects by name or path.")
 @output_option
-def projects(
+@click.pass_context
+def list_(
+    ctx: click.Context,
     name: Optional[str],
     output: Optional[OutputFormat],
 ):
     """
-    📁  Get a list of projects.
+    \b
+    List user projects
+
+    \b
+    Aliases: projects, project ls
+    \f
+    Args:
+        ctx: click.Context object.
+        name (str): Project name or path to project directory.
+        output (str): The output format. Defaults to "table".
+    """
+    ctx.invoke(projects_list, name=name, output=output)
+
+
+@click.command("projects", hidden=True)
+@click.option("--name", help="Filter projects by name or path.")
+@output_option
+def projects_list(
+    name: Optional[str],
+    output: Optional[OutputFormat],
+):
+    """
+    \b
+    List user projects
 
     \f
     Args:
-        name (str): Project name or path to project folder.
+        name (str): Project name or path to project directory.
         output (str): The output format. Defaults to "table".
     """
-    response_data = fetch_and_handle_response(project.list, URL_PATH, name)
+    response_data = fetch_and_handle_response(
+        func=projects.list,
+        path=URL_PATH,
+        name=name
+    )
     handle_output(response_data, output, URL_PATH)
 
 

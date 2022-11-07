@@ -1,18 +1,17 @@
-"""TABLE formatting"""
+""" Formatting raw data into tabular data in the terminal. """
 
+import json
 import re
 import sys
-import json
-from typing import List, Union, Optional
 from datetime import datetime, timezone
 from enum import Enum, unique
+from typing import List, Optional, Union
 
-import yaml
 import click
+import humanize
+import yaml
+from pygments import formatters, highlight, lexers
 from tabulate import tabulate
-from pygments import highlight, lexers, formatters
-
-from inferex.utils.io.utils import get_datetime_age
 
 
 CONFIG_DISPLAY_TABLE = {
@@ -55,6 +54,12 @@ d = days,
 w = weeks
 """
 
+# Regex for IP addresses
+IP_ADDRESS_PATTERN = re.compile(r"(10\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})")
+
+# Formatter for yaml & json
+PYGMENTS_FORMATTER = formatters.TerminalFormatter()
+
 @unique
 class OutputFormat(str, Enum):
     """ Enumeration of available CLI output options. """
@@ -62,11 +67,31 @@ class OutputFormat(str, Enum):
     json = "json"
     yaml = "yaml"
 
-# Regex for IP addresses
-ip_address_pattern = re.compile(r"(10\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})")
 
-# Formatter for yaml & json
-pygments_formatter = formatters.TerminalFormatter()
+def get_datetime_age(timestamp: str) -> str:
+    """
+    Get the age of a datetime string relative to local timezone.
+
+    Args:
+        timestamp (str): The datetime string.
+
+    Returns:
+        str: The age of the datetime string.
+    """
+    if not timestamp:
+        return timestamp
+
+    # Parse the datetime string, split off microseconds
+    utc_time = datetime.strptime(timestamp.split(".")[0], "%Y-%m-%dT%H:%M:%S")
+
+    # Get the timezone offset
+    timezone_offset = datetime.now(timezone.utc).astimezone().utcoffset()
+
+    # Convert UTC to local time
+    current_age = utc_time + timezone_offset
+
+    return humanize.naturaltime(current_age)
+
 
 def output_option(function):
     """ click decorator for specifying output format. """
@@ -78,6 +103,7 @@ def output_option(function):
         help="The format to display output data in."
     )(function)
     return function
+
 
 def format_display_data(
     api_data: Union[list, dict],
@@ -123,7 +149,7 @@ def format_display_data(
             if 'added' in key or 'edited' in key:
                 val = get_datetime_age(val)
             # rename the keys
-            new_data.update({KEY_MAPS.get(key) or key.upper(): val})
+            new_data[KEY_MAPS.get(key) or key.upper()] = val
 
         formatted_data.append(new_data)
 
@@ -163,7 +189,7 @@ def handle_output(
             data = highlight(
                 data,
                 lexers.JsonLexer(),
-                pygments_formatter,
+                PYGMENTS_FORMATTER,
             )
         click.echo(data)
     elif output == OutputFormat.yaml:
@@ -172,14 +198,13 @@ def handle_output(
             data = highlight(
                 data,
                 lexers.YamlLexer(),
-                pygments_formatter,
+                PYGMENTS_FORMATTER,
             )
         click.echo(data)
 
 
 def format_log(
     log: str,
-    pod_name: str,
     container_name: str
 ) -> Union[str, None]:
     """Formats a log line
@@ -192,8 +217,6 @@ def format_log(
     Returns:
         Union[str, None]: The formatted log
     """
-    # Format pod_name
-    pod_name = pod_name.split("-")[-1]
 
     # Format timestamp
     timestamp, log = log
@@ -213,14 +236,23 @@ def format_log(
     if ">>" in log:
         log = log.split(">>", 1)[1]
 
+    # Remove the TaskID from operator server log
+    # 00:37:37.000 operator-serve I: Task:3-simplefunction1g-d1bf610e-6v4:#30 DONE 0.0s
+    # becomes
+    # 00:37:37.000 operator-serve I: #30 DONE 0.0s
+    log = re.sub(r"Task:.*:", "", log)
+
+    # Rename "operator-serve" to "build-log" so it's more meaningful to users
+    container_name = container_name.replace("operator-serve", "build-log")
+
     # Remove IP addresses
-    log = ip_address_pattern.sub("", log)
+    log = IP_ADDRESS_PATTERN.sub("", log)
 
     # Remove double spacing
     log = " ".join(log.split())
 
     # Format log
-    formatted_log = (timestamp, f"pod-{pod_name} {container_name} {verbosity}: {log}")
+    formatted_log = (timestamp, f"{container_name} {verbosity}: {log}")
     return formatted_log
 
 
@@ -235,10 +267,8 @@ def display_logs(data: dict):
     logs = list(filter(
         lambda log: log is not None,
         (
-            format_log(log, pod_name, container_name)
-            for namespace in data.values()
-            for pod_name, pod in namespace.items()
-            for container_name, container in pod.items()
+            format_log(log, container_name)
+            for container_name, container in data.items()
             for log in container
             if log
         )
