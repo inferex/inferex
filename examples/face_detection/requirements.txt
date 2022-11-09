@@ -1,4 +1,0 @@
-facenet-pytorch==2.5.2
-numpy==1.21.1
-pillow==9.0.0
-torch==1.11.0

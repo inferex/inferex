@@ -11,8 +11,7 @@ class SentimentAnalysisPipeline:
     Example model class for with Python transformers.
     """
 
-    def __init__(self, config: dict):
-        self.config = config
+    def __init__(self):
         # load model
         self.model = transformers.pipeline(task="sentiment-analysis")
 

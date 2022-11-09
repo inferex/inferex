@@ -72,8 +72,8 @@ class ApiClientSession(requests.Session):
             else:
                 status_code = ""
             if (
-                hasattr(exc, "response") and exc.response
-                and "application/json" in exc.response.headers.get("Content-Type", {})
+                hasattr(exc, "response") and
+                "application/json" in exc.response.headers.get("Content-Type", {})
                 ):
                 detail = "\n" + exc.response.json().get("detail", "")
             else:

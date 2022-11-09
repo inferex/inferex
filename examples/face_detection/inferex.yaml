@@ -1,7 +1,0 @@
-
-
-project:
-  name: FaceDetection
-
-scaling:
-  replicas: 1

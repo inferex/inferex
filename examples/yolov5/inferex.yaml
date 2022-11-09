@@ -1,6 +1,0 @@
-
-project:
-  name: YoloV5
-
-scaling:
-  replicas: 1
