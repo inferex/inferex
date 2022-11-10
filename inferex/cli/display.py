@@ -38,7 +38,7 @@ KEY_MAPS = {
     'edited_at': "AGE",
     'project_name': "PROJECT",
     'deployment_status': "STATUS",
-    'deployment_url': "DOMAIN",
+    'deployment_url': "DEPLOYMENT URL",
     'deployment_timestamp': "AGE",
     'repository_url': "URL",
     'git_sha': "SHA",

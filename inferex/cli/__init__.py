@@ -60,9 +60,9 @@ def init(project_path: str, project_name: Optional[str], _: Optional[str]):
     # Create inferex.yaml
     with open(yaml_file, "w", encoding="utf-8") as file:
         if project_name:
-            yaml.dump({"project": {"name": project_name}, "scaling": {"replicas": 1}}, file)
-        else:
-            yaml.dump(DEFAULT_PROJECT, file)
+            DEFAULT_PROJECT['project']['name'] = project_name
+
+        yaml.dump(DEFAULT_PROJECT, file)
 
     success(f"Project {project_name} initialized in {path.absolute()}")
     click.echo("📝 Edit the 'inferex.yaml' file to customize deployment parameters.")
@@ -86,10 +86,11 @@ def init(project_path: str, project_name: Optional[str], _: Optional[str]):
 def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]):
     """\b
     🔑  Log in to Inferex CLI
-        \b
-        Username and password may be set through environment variables or an .inferex file:
-            INFEREX_USERNAME=myuser
-            INFEREX_PASSWORD=mypassword
+
+    \b
+    Username and password may be set through environment variables or an .inferex file:
+        INFEREX_USERNAME=myuser
+        INFEREX_PASSWORD=mypassword
 
     \f
     Args:
@@ -113,15 +114,21 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
 
 
 @cli.command("deploy")
-@click.option("--force",
-    is_flag=True,
-    default=False,
-    help="Use a random SHA to bypass duplicate constraints."
-)
+
 @click.option(
     "--token",
     default=None,
     help="Pass in a JWT token instead of reading from local cache."
+)
+@click.option(
+    "--project",
+    default=None,
+    help="Project name to for the deployment",
+)
+@click.option("--force",
+    is_flag=True,
+    default=False,
+    help="Use a random SHA to bypass duplicate constraints."
 )
 @click.option(
     "--detach",
@@ -130,7 +137,13 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
     help="Detached mode: push the deployment and do not stream logs.",
 )
 @click.argument("path", default=".")
-def deploy(force: Optional[bool], token: Optional[str], detach: Optional[bool], path: str):
+def deploy(
+    token: Optional[str],
+    project: Optional[str],
+    force: Optional[bool],
+    detach: Optional[bool],
+    path: str
+):
     """
     🚀  Deploy a project
 
@@ -146,7 +159,7 @@ def deploy(force: Optional[bool], token: Optional[str], detach: Optional[bool], 
     click.echo("🐳 Preparing project...")
     start_time = time.time()
     try:
-        response_or_stream = deployments.deploy(path, token, force=force, stream=not detach)
+        response_or_stream = deployments.deploy(path, token, project_name=project, force=force, stream=not detach)
     except DeployFailureError as exc:
         error(f"Deploy failed: {exc}")
         sys.exit()

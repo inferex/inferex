@@ -43,7 +43,9 @@ DEFAULT_PROJECT = {
         "name": "untitled"
     },
     "scaling": {
-        "replicas": 1
+        "replicas": 1,
+        "memory": "5G",
+        "cpu": "1000m"
     },
 }
 

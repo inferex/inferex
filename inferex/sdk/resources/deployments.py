@@ -141,13 +141,19 @@ def display_project_size_warning(bundle_size_bytes: int, project_warning_bytes: 
         )
 
 
-def deploy(path: str, token: Optional[str] = None, force: bool = False, stream: bool = False) -> Response:
+def deploy(
+    path: str,
+    token: Optional[str] = None,
+    project_name: Optional[str] = None,
+    force: bool = False,
+    stream: bool = False) -> Response:
     """
     Deploy a Deployment object to the server.
 
     Args:
         path (str): Target directory path of the project to be deployed. Can be a relative path.
         token (Optional[str]): API token to make the request with.
+        project_name (Optional[str]): The project name to use for the deployment
             By default this is read from local storage.
         force (bool): Force the deployment to deploy, even if an identical
             project (hash of project) exists. Appends a random string of
@@ -178,11 +184,18 @@ def deploy(path: str, token: Optional[str] = None, force: bool = False, stream: 
 
     # checks if inferex.yaml is valid
     project_config = get_project_config(path)
-    project_name = project_config.get("project", {}).get("name")
+    yaml_project_name = project_config.get("project", {}).get("name")
 
-    if not project_name:
-        project_name = path.name or "untitled"
-        logger.info(f"inferex.yaml file was not found, project name defaulting to: {project_name}")
+    # Warning if specified project name is different from inferex.yaml
+    if project_name:
+        if yaml_project_name != project_name:
+            click.echo(f"Using specified project name \"{project_name}\" "
+                       f"and not the one in inferex.yaml \"{yaml_project_name}\"")
+    else:
+        project_name = yaml_project_name
+        if not project_name:
+            project_name = path.name or "untitled"
+            click.echo(f"inferex.yaml file was not found, project name defaulting to: {project_name}")
 
     # create and validate project name server side
     response = projects.create(name=project_name, token=token)
