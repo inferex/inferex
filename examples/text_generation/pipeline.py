@@ -1,6 +1,3 @@
-"""
-Example runables for testing.
-"""
 import transformers
 
 import inferex

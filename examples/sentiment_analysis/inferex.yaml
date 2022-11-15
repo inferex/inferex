@@ -3,4 +3,6 @@ project:
   name: SentimentAnalysis
 
 scaling:
+  cpu: "1000m"
+  memory: "5G"
   replicas: 1

@@ -114,7 +114,6 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
 
 
 @cli.command("deploy")
-
 @click.option(
     "--token",
     default=None,
@@ -123,7 +122,7 @@ def cli_login(username: Optional[str], password: Optional[str], _: Optional[str]
 @click.option(
     "--project",
     default=None,
-    help="Project name to for the deployment",
+    help="Project name to use for the deployment.",
 )
 @click.option("--force",
     is_flag=True,

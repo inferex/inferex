@@ -72,7 +72,7 @@ class ApiClientSession(requests.Session):
             else:
                 status_code = ""
             if (
-                hasattr(exc, "response") and
+                hasattr(exc, "response") and exc.response is not None and
                 "application/json" in exc.response.headers.get("Content-Type", {})
                 ):
                 detail = "\n" + exc.response.json().get("detail", "")

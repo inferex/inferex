@@ -1,6 +1,0 @@
-
-project:
-  name: TextClassification
-
-scaling:
-  replicas: 1

@@ -1,7 +1,3 @@
-"""
-Example runables for testing.
-"""
-
 import inferex
 
 
