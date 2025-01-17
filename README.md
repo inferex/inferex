@@ -1,3 +1,5 @@
+> ⚠️ **IMPORTANT NOTICE**: Inferex Inc. has shut down and is no longer operational. This repository is archived for reference purposes only.
+
 # Inferex CLI
 
 Deploy and manage your AI projects on Inferex infrastructure.
